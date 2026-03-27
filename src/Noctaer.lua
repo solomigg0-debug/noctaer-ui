@@ -2,479 +2,557 @@
 
 local Noctaer = {}
 Noctaer.__index = Noctaer
-Noctaer.Flags = {}
+Noctaer.Flags  = {}
 
-local TweenService     = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
-local RunService       = game:GetService("RunService")
-local CoreGui          = game:GetService("CoreGui")
+local Svc = {
+	TweenService     = game:GetService("TweenService"),
+	UserInputService = game:GetService("UserInputService"),
+	RunService       = game:GetService("RunService"),
+	CoreGui          = game:GetService("CoreGui"),
+}
 
 local Theme = {
-	Background    = Color3.fromRGB(12, 12, 14),
-	Surface       = Color3.fromRGB(18, 18, 21),
-	SurfaceHover  = Color3.fromRGB(24, 24, 28),
-	Border        = Color3.fromRGB(32, 32, 38),
-	BorderAccent  = Color3.fromRGB(50, 50, 60),
-	Accent        = Color3.fromRGB(99, 102, 241),
-	AccentDim     = Color3.fromRGB(60, 62, 150),
+	Background    = Color3.fromRGB(12,  12,  14),
+	Surface       = Color3.fromRGB(18,  18,  21),
+	SurfaceHover  = Color3.fromRGB(24,  24,  28),
+	Border        = Color3.fromRGB(32,  32,  38),
+	BorderAccent  = Color3.fromRGB(50,  50,  60),
+	Accent        = Color3.fromRGB(99,  102, 241),
+	AccentDim     = Color3.fromRGB(60,  62,  150),
 	TextPrimary   = Color3.fromRGB(220, 220, 228),
 	TextSecondary = Color3.fromRGB(110, 110, 125),
-	TextMuted     = Color3.fromRGB(65, 65, 78),
-	ToggleOn      = Color3.fromRGB(99, 102, 241),
-	ToggleOff     = Color3.fromRGB(38, 38, 46),
-	SliderTrack   = Color3.fromRGB(28, 28, 34),
-	SliderFill    = Color3.fromRGB(99, 102, 241),
-	NotifBg       = Color3.fromRGB(16, 16, 20),
+	TextMuted     = Color3.fromRGB(65,  65,  78),
+	ToggleOn      = Color3.fromRGB(99,  102, 241),
+	ToggleOff     = Color3.fromRGB(38,  38,  46),
+	SliderTrack   = Color3.fromRGB(28,  28,  34),
+	SliderFill    = Color3.fromRGB(99,  102, 241),
+	NotifBg       = Color3.fromRGB(16,  16,  20),
 }
 
-local C = {
-	WindowW  = 520,
-	WindowH  = 440,
-	TopbarH  = 42,
-	TabListW = 128,
-	ElH      = 38,
-	ElPad    = 12,
-	Gap      = 4,
-	R        = 8,
-	Rs       = 5,
-	TF       = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-	TM       = TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+local K = {
+	WinW    = 520,
+	WinH    = 440,
+	TopH    = 42,
+	SideW   = 128,
+	ElH     = 38,
+	Pad     = 12,
+	Gap     = 4,
+	R       = 8,
+	Rs      = 5,
+	TF      = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+	TM      = TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 }
 
-local function Tw(o, ti, p) TweenService:Create(o, ti, p):Play() end
+local function Tw(o, t, p)  Svc.TweenService:Create(o, t, p):Play() end
+local function IsAlive(i)   return i and i.Parent ~= nil end
 
-local function Corner(p, r)
-	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0, r or C.R)
-	c.Parent = p
-	return c
+local function New(class, props, children)
+	local i = Instance.new(class)
+	for k, v in props do i[k] = v end
+	if children then
+		for _, c in children do c.Parent = i end
+	end
+	return i
 end
 
-local function Stroke(p, col, thick)
-	local s = Instance.new("UIStroke")
-	s.Color           = col or Theme.Border
-	s.Thickness       = thick or 1
-	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	s.Parent = p
-	return s
+local function MkCorner(p, r)
+	return New("UICorner", {CornerRadius = UDim.new(0, r or K.R), Parent = p})
 end
 
-local function Pad(p, t, b, l, r)
-	local u = Instance.new("UIPadding")
-	u.PaddingTop    = UDim.new(0, t or 0)
-	u.PaddingBottom = UDim.new(0, b or 0)
-	u.PaddingLeft   = UDim.new(0, l or 0)
-	u.PaddingRight  = UDim.new(0, r or 0)
-	u.Parent = p
+local function MkStroke(p, col, thick)
+	return New("UIStroke", {
+		Color           = col or Theme.Border,
+		Thickness       = thick or 1,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Parent          = p,
+	})
 end
 
-local function ListLayout(p, gap)
-	local l = Instance.new("UIListLayout")
-	l.SortOrder = Enum.SortOrder.LayoutOrder
-	l.Padding   = UDim.new(0, gap or 0)
-	l.Parent    = p
-	return l
+local function MkPad(p, t, b, l, r)
+	return New("UIPadding", {
+		PaddingTop    = UDim.new(0, t or 0),
+		PaddingBottom = UDim.new(0, b or 0),
+		PaddingLeft   = UDim.new(0, l or 0),
+		PaddingRight  = UDim.new(0, r or 0),
+		Parent        = p,
+	})
 end
 
-local function Frame(p, col, sz, pos, zi)
+local function MkList(p, gap, dir)
+	return New("UIListLayout", {
+		SortOrder        = Enum.SortOrder.LayoutOrder,
+		Padding          = UDim.new(0, gap or 0),
+		FillDirection    = dir or Enum.FillDirection.Vertical,
+		Parent           = p,
+	})
+end
+
+local function MkFrame(p, props)
 	local f = Instance.new("Frame")
-	f.BackgroundColor3 = col or Theme.Surface
-	f.BorderSizePixel  = 0
-	f.Size             = sz  or UDim2.new(1, 0, 0, C.ElH)
-	f.Position         = pos or UDim2.new(0, 0, 0, 0)
-	if zi then f.ZIndex = zi end
+	f.BorderSizePixel = 0
+	for k, v in props do f[k] = v end
 	f.Parent = p
 	return f
 end
 
-local function Btn(p, sz, pos, zi)
+local function MkBtn(p, props)
 	local b = Instance.new("TextButton")
 	b.BackgroundTransparency = 1
 	b.BorderSizePixel        = 0
-	b.Size                   = sz  or UDim2.new(1, 0, 1, 0)
-	b.Position               = pos or UDim2.new(0, 0, 0, 0)
 	b.Text                   = ""
 	b.AutoButtonColor        = false
-	if zi then b.ZIndex = zi end
+	for k, v in props do b[k] = v end
 	b.Parent = p
 	return b
 end
 
-local function Label(p, txt, tsz, col, xa, zi)
+local function MkLabel(p, props)
 	local l = Instance.new("TextLabel")
 	l.BackgroundTransparency = 1
-	l.Text           = txt or ""
-	l.TextSize       = tsz or 13
-	l.TextColor3     = col or Theme.TextPrimary
-	l.Font           = Enum.Font.Gotham
-	l.TextXAlignment = xa  or Enum.TextXAlignment.Left
-	l.TextYAlignment = Enum.TextYAlignment.Center
-	l.Size           = UDim2.new(1, 0, 1, 0)
-	if zi then l.ZIndex = zi end
+	l.Font                   = Enum.Font.Gotham
+	l.TextYAlignment         = Enum.TextYAlignment.Center
+	for k, v in props do l[k] = v end
 	l.Parent = p
 	return l
 end
 
-local function GetGuiParent()
-	if gethui then
-		return gethui()
-	end
-	local sg = Instance.new("ScreenGui")
-	sg.ResetOnSpawn = false
+local function GetGuiRoot()
+	if gethui then return gethui() end
 	if syn and syn.protect_gui then
+		local sg = New("ScreenGui", {ResetOnSpawn = false})
 		pcall(syn.protect_gui, sg)
+		sg.Parent = Svc.CoreGui
+		return sg
 	end
-	sg.Parent = CoreGui
-	return sg
-end
-
-local function SetupDrag(handle, target)
-	local active = false
-	local origin = Vector3.new()
-	local base   = UDim2.new()
-
-	handle.InputBegan:Connect(function(i)
-		if i.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-		active = true
-		origin = i.Position
-		base   = target.Position
-		i.Changed:Connect(function()
-			if i.UserInputState == Enum.UserInputState.End then
-				active = false
-			end
-		end)
-	end)
-
-	UserInputService.InputChanged:Connect(function(i)
-		if not active then return end
-		if i.UserInputType ~= Enum.UserInputType.MouseMovement then return end
-		local d = i.Position - origin
-		target.Position = UDim2.new(
-			base.X.Scale, base.X.Offset + d.X,
-			base.Y.Scale, base.Y.Offset + d.Y
-		)
-	end)
+	return Svc.CoreGui
 end
 
 function Noctaer:CreateWindow(opts)
-	local wTitle  = opts.Title    or "Noctaer"
-	local wSub    = opts.Subtitle or ""
-	local hideKey = opts.HideKey  or Enum.KeyCode.RightControl
+	assert(type(opts) == "table", "CreateWindow: opts must be a table")
 
-	local sg = Instance.new("ScreenGui")
-	sg.Name           = "Noctaer"
-	sg.ResetOnSpawn   = false
-	sg.ZIndexBehavior = Enum.ZIndexBehavior.Global
-	sg.DisplayOrder   = 999
+	local wTitle  = tostring(opts.Title    or "Noctaer")
+	local wSub    = tostring(opts.Subtitle or "")
+	local hideKey = opts.HideKey or Enum.KeyCode.RightControl
 
-	local guiParent = GetGuiParent()
-	local dest      = guiParent:IsA("ScreenGui") and guiParent.Parent or guiParent
+	local conns     = {}
+	local notifIdx  = 0
+	local activeTab = nil
+	local tabBtns   = {}
+	local tabPages  = {}
+	local tabCount  = 0
 
-	for _, v in ipairs(dest:GetChildren()) do
+	local function TrackConn(c) conns[#conns + 1] = c end
+	local function DisconnectAll()
+		for _, c in conns do pcall(function() c:Disconnect() end) end
+		table.clear(conns)
+	end
+
+	local sg = New("ScreenGui", {
+		Name           = "Noctaer",
+		ResetOnSpawn   = false,
+		ZIndexBehavior = Enum.ZIndexBehavior.Global,
+		DisplayOrder   = 999,
+	})
+
+	local root = GetGuiRoot()
+	local dest = (root:IsA("ScreenGui") and root.Parent) or root
+	for _, v in dest:GetChildren() do
 		if v ~= sg and v.Name == "Noctaer" then v:Destroy() end
 	end
 	sg.Parent = dest
 
-	-- notification state scoped to this window
-	local notifIdx       = 0
-	local notifContainer = Instance.new("Frame")
-	notifContainer.Name                 = "Notifs"
-	notifContainer.BackgroundTransparency = 1
-	notifContainer.Size                 = UDim2.new(0, 296, 1, -20)
-	notifContainer.Position             = UDim2.new(1, -304, 0, 10)
-	notifContainer.ZIndex               = 200
-	notifContainer.Parent               = sg
-	local notifLayout = ListLayout(notifContainer, 6)
+	local notifFrame = MkFrame(sg, {
+		Name                 = "Notifs",
+		BackgroundTransparency = 1,
+		Size                 = UDim2.new(0, 296, 1, -20),
+		Position             = UDim2.new(1, -304, 0, 10),
+		ZIndex               = 200,
+	})
+	local notifLayout = MkList(notifFrame, 6)
 	notifLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
 
 	local Window = {}
 
 	function Window:Notify(o)
-		local title    = o.Title    or "Notification"
-		local content  = o.Content  or ""
-		local duration = o.Duration or 5
+		assert(type(o) == "table", "Notify: opts must be a table")
+		local title    = tostring(o.Title   or "Notification")
+		local content  = tostring(o.Content or "")
+		local duration = tonumber(o.Duration) or 5
 
 		notifIdx += 1
 
-		local card = Frame(notifContainer, Theme.NotifBg, UDim2.new(1, 0, 0, 62))
-		card.ClipsDescendants   = true
-		card.LayoutOrder        = notifIdx
-		card.ZIndex             = 200
-		card.BackgroundTransparency = 1
-		Corner(card, C.Rs)
-		Stroke(card, Theme.Border)
+		local card = MkFrame(notifFrame, {
+			BackgroundColor3     = Theme.NotifBg,
+			BackgroundTransparency = 1,
+			ClipsDescendants     = true,
+			LayoutOrder          = notifIdx,
+			Size                 = UDim2.new(1, 0, 0, 62),
+			ZIndex               = 200,
+		})
+		MkCorner(card, K.Rs)
+		MkStroke(card, Theme.Border)
 
-		local bar = Frame(card, Theme.Accent, UDim2.new(0, 3, 1, -8), UDim2.new(0, 0, 0, 4))
-		bar.ZIndex = 201
-		Corner(bar, 2)
+		MkFrame(card, {
+			BackgroundColor3 = Theme.Accent,
+			Size             = UDim2.new(0, 3, 1, -8),
+			Position         = UDim2.new(0, 0, 0, 4),
+			ZIndex           = 201,
+		})
 
-		local tl = Instance.new("TextLabel")
-		tl.BackgroundTransparency = 1
-		tl.Text             = title
-		tl.TextSize         = 13
-		tl.Font             = Enum.Font.GothamBold
-		tl.TextColor3       = Theme.TextPrimary
-		tl.TextXAlignment   = Enum.TextXAlignment.Left
-		tl.TextYAlignment   = Enum.TextYAlignment.Center
-		tl.TextTransparency = 1
-		tl.Size             = UDim2.new(1, -20, 0, 18)
-		tl.Position         = UDim2.new(0, 14, 0, 9)
-		tl.ZIndex           = 201
-		tl.Parent           = card
+		local tl = MkLabel(card, {
+			Text             = title,
+			TextSize         = 13,
+			Font             = Enum.Font.GothamBold,
+			TextColor3       = Theme.TextPrimary,
+			TextXAlignment   = Enum.TextXAlignment.Left,
+			TextTransparency = 1,
+			Size             = UDim2.new(1, -20, 0, 18),
+			Position         = UDim2.new(0, 14, 0, 9),
+			ZIndex           = 201,
+		})
+		local cl = MkLabel(card, {
+			Text             = content,
+			TextSize         = 11,
+			TextColor3       = Theme.TextSecondary,
+			TextXAlignment   = Enum.TextXAlignment.Left,
+			TextYAlignment   = Enum.TextYAlignment.Top,
+			TextWrapped      = true,
+			TextTransparency = 1,
+			Size             = UDim2.new(1, -20, 0, 26),
+			Position         = UDim2.new(0, 14, 0, 30),
+			ZIndex           = 201,
+		})
 
-		local cl = Instance.new("TextLabel")
-		cl.BackgroundTransparency = 1
-		cl.Text             = content
-		cl.TextSize         = 11
-		cl.Font             = Enum.Font.Gotham
-		cl.TextColor3       = Theme.TextSecondary
-		cl.TextXAlignment   = Enum.TextXAlignment.Left
-		cl.TextYAlignment   = Enum.TextYAlignment.Top
-		cl.TextWrapped      = true
-		cl.TextTransparency = 1
-		cl.Size             = UDim2.new(1, -20, 0, 26)
-		cl.Position         = UDim2.new(0, 14, 0, 30)
-		cl.ZIndex           = 201
-		cl.Parent           = card
-
-		Tw(card, C.TM, {BackgroundTransparency = 0})
-		Tw(tl,   C.TM, {TextTransparency = 0})
-		Tw(cl,   C.TM, {TextTransparency = 0.15})
+		Tw(card, K.TM, {BackgroundTransparency = 0})
+		Tw(tl,   K.TM, {TextTransparency = 0})
+		Tw(cl,   K.TM, {TextTransparency = 0.15})
 
 		task.delay(duration, function()
-			if not card or not card.Parent then return end
-			Tw(card, C.TM, {BackgroundTransparency = 1})
-			Tw(tl,   C.TM, {TextTransparency = 1})
-			Tw(cl,   C.TM, {TextTransparency = 1})
-			task.delay(0.35, function()
-				if not card or not card.Parent then return end
-				Tw(card, C.TF, {Size = UDim2.new(1, 0, 0, 0)})
-				task.delay(0.2, function()
-					if card and card.Parent then card:Destroy() end
+			if not IsAlive(card) then return end
+			Tw(card, K.TM, {BackgroundTransparency = 1})
+			Tw(tl,   K.TM, {TextTransparency = 1})
+			Tw(cl,   K.TM, {TextTransparency = 1})
+			task.delay(K.TM.Time + 0.05, function()
+				if not IsAlive(card) then return end
+				Tw(card, K.TF, {Size = UDim2.new(1, 0, 0, 0)})
+				task.delay(K.TF.Time + 0.05, function()
+					if IsAlive(card) then card:Destroy() end
 				end)
 			end)
 		end)
 	end
 
-	-- keep Noctaer:Notify working by forwarding to Window:Notify
 	Noctaer.Notify = function(_, o) Window:Notify(o) end
 
-	-- drop shadow
-	local shadow = Instance.new("ImageLabel")
-	shadow.BackgroundTransparency = 1
-	shadow.Image             = "rbxassetid://6014261993"
-	shadow.ImageColor3       = Color3.new(0, 0, 0)
-	shadow.ImageTransparency = 1
-	shadow.ScaleType         = Enum.ScaleType.Slice
-	shadow.SliceCenter       = Rect.new(49, 49, 450, 450)
-	shadow.AnchorPoint       = Vector2.new(0.5, 0.5)
-	shadow.Size              = UDim2.new(0, C.WindowW + 48, 0, C.WindowH + 48)
-	shadow.Position          = UDim2.new(0.5, 0, 0.5, 0)
-	shadow.ZIndex            = 1
-	shadow.Parent            = sg
+	local win = MkFrame(sg, {
+		BackgroundColor3     = Theme.Background,
+		BackgroundTransparency = 1,
+		ClipsDescendants     = false,
+		Size                 = UDim2.new(0, K.WinW, 0, K.WinH),
+		Position             = UDim2.new(0.5, -K.WinW / 2, 0.5, -K.WinH / 2),
+		ZIndex               = 2,
+	})
+	MkCorner(win, K.R)
+	MkStroke(win, Theme.Border)
 
-	local win = Frame(sg, Theme.Background,
-		UDim2.new(0, C.WindowW, 0, C.WindowH),
-		UDim2.new(0.5, -C.WindowW / 2, 0.5, -C.WindowH / 2),
-		2
-	)
-	win.ClipsDescendants = false
-	Corner(win, C.R)
-	Stroke(win, Theme.Border)
+	local shadow = New("ImageLabel", {
+		BackgroundTransparency = 1,
+		Image                  = "rbxassetid://6014261993",
+		ImageColor3            = Color3.new(0, 0, 0),
+		ImageTransparency      = 1,
+		ScaleType              = Enum.ScaleType.Slice,
+		SliceCenter            = Rect.new(49, 49, 450, 450),
+		AnchorPoint            = Vector2.new(0.5, 0.5),
+		Size                   = UDim2.new(1, 48, 1, 48),
+		Position               = UDim2.new(0.5, 0, 0.5, 0),
+		ZIndex                 = 1,
+		Parent                 = win,
+	})
 
-	local topbar = Frame(win, Theme.Surface,
-		UDim2.new(1, 0, 0, C.TopbarH),
-		UDim2.new(0, 0, 0, 0),
-		3
-	)
-	Corner(topbar, C.R)
-	Frame(topbar, Theme.Surface, UDim2.new(1, 0, 0, C.R), UDim2.new(0, 0, 1, -C.R), 3)
-	Frame(win, Theme.Accent, UDim2.new(1, 0, 0, 1), UDim2.new(0, 0, 0, C.TopbarH), 3)
+	local topbar = MkFrame(win, {
+		BackgroundColor3 = Theme.Surface,
+		Size             = UDim2.new(1, 0, 0, K.TopH),
+		ZIndex           = 3,
+	})
+	MkCorner(topbar, K.R)
+	MkFrame(topbar, {
+		BackgroundColor3 = Theme.Surface,
+		Size             = UDim2.new(1, 0, 0, K.R),
+		Position         = UDim2.new(0, 0, 1, -K.R),
+		ZIndex           = 3,
+	})
+	MkFrame(win, {
+		BackgroundColor3 = Theme.Accent,
+		Size             = UDim2.new(1, 0, 0, 1),
+		Position         = UDim2.new(0, 0, 0, K.TopH),
+		ZIndex           = 3,
+	})
 
 	if wSub ~= "" then
-		local tl = Instance.new("TextLabel")
-		tl.BackgroundTransparency = 1
-		tl.Text           = wTitle
-		tl.TextSize       = 13
-		tl.Font           = Enum.Font.GothamBold
-		tl.TextColor3     = Theme.TextPrimary
-		tl.TextXAlignment = Enum.TextXAlignment.Left
-		tl.TextYAlignment = Enum.TextYAlignment.Center
-		tl.Size           = UDim2.new(0, 240, 0, 18)
-		tl.Position       = UDim2.new(0, C.ElPad, 0, 6)
-		tl.ZIndex         = 4
-		tl.Parent         = topbar
-
-		local sl = Instance.new("TextLabel")
-		sl.BackgroundTransparency = 1
-		sl.Text           = wSub
-		sl.TextSize       = 11
-		sl.Font           = Enum.Font.Gotham
-		sl.TextColor3     = Theme.TextMuted
-		sl.TextXAlignment = Enum.TextXAlignment.Left
-		sl.TextYAlignment = Enum.TextYAlignment.Center
-		sl.Size           = UDim2.new(0, 240, 0, 14)
-		sl.Position       = UDim2.new(0, C.ElPad, 0, 24)
-		sl.ZIndex         = 4
-		sl.Parent         = topbar
+		MkLabel(topbar, {
+			Text           = wTitle,
+			TextSize       = 13,
+			Font           = Enum.Font.GothamBold,
+			TextColor3     = Theme.TextPrimary,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Size           = UDim2.new(0, 240, 0, 18),
+			Position       = UDim2.new(0, K.Pad, 0, 6),
+			ZIndex         = 4,
+		})
+		MkLabel(topbar, {
+			Text           = wSub,
+			TextSize       = 11,
+			TextColor3     = Theme.TextMuted,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Size           = UDim2.new(0, 240, 0, 14),
+			Position       = UDim2.new(0, K.Pad, 0, 24),
+			ZIndex         = 4,
+		})
 	else
-		local tl = Label(topbar, wTitle, 13, Theme.TextPrimary, Enum.TextXAlignment.Left, 4)
-		tl.Font     = Enum.Font.GothamBold
-		tl.Size     = UDim2.new(0, 240, 1, 0)
-		tl.Position = UDim2.new(0, C.ElPad, 0, 0)
+		MkLabel(topbar, {
+			Text           = wTitle,
+			TextSize       = 13,
+			Font           = Enum.Font.GothamBold,
+			TextColor3     = Theme.TextPrimary,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Size           = UDim2.new(0, 240, 1, 0),
+			Position       = UDim2.new(0, K.Pad, 0, 0),
+			ZIndex         = 4,
+		})
 	end
 
-	local function MakeTopBtn(offsetR, glyph)
-		local b = Btn(topbar,
-			UDim2.new(0, 28, 0, 28),
-			UDim2.new(1, -offsetR, 0.5, -14),
-			5
-		)
-		Corner(b, 4)
-		local ic = Label(b, glyph, 12, Theme.TextMuted, Enum.TextXAlignment.Center, 5)
-		ic.Font = Enum.Font.GothamBold
+	local function MkTopBtn(rightOffset, glyph)
+		local b = MkBtn(topbar, {
+			Size     = UDim2.new(0, 28, 0, 28),
+			Position = UDim2.new(1, -rightOffset, 0.5, -14),
+			ZIndex   = 5,
+		})
+		MkCorner(b, 4)
+		local ic = MkLabel(b, {
+			Text           = glyph,
+			TextSize       = 12,
+			Font           = Enum.Font.GothamBold,
+			TextColor3     = Theme.TextMuted,
+			TextXAlignment = Enum.TextXAlignment.Center,
+			ZIndex         = 5,
+		})
 		b.MouseEnter:Connect(function()
 			b.BackgroundTransparency = 0.82
-			Tw(ic, C.TF, {TextColor3 = Theme.TextPrimary})
+			Tw(ic, K.TF, {TextColor3 = Theme.TextPrimary})
 		end)
 		b.MouseLeave:Connect(function()
 			b.BackgroundTransparency = 1
-			Tw(ic, C.TF, {TextColor3 = Theme.TextMuted})
+			Tw(ic, K.TF, {TextColor3 = Theme.TextMuted})
 		end)
 		return b
 	end
 
-	local closeBtn = MakeTopBtn(8,  "✕")
-	local minBtn   = MakeTopBtn(42, "─")
-	closeBtn.MouseButton1Click:Connect(function() sg:Destroy() end)
+	local closeBtn = MkTopBtn(8,  "✕")
+	local minBtn   = MkTopBtn(42, "─")
 
-	local body = Frame(win, Theme.Background,
-		UDim2.new(1, 0, 1, -C.TopbarH),
-		UDim2.new(0, 0, 0, C.TopbarH),
-		2
-	)
-	body.ClipsDescendants = true
+	closeBtn.MouseButton1Click:Connect(function()
+		DisconnectAll()
+		sg:Destroy()
+	end)
 
-	local sidebar = Frame(body, Theme.Surface,
-		UDim2.new(0, C.TabListW, 1, 0),
-		UDim2.new(0, 0, 0, 0),
-		3
-	)
-	Corner(sidebar, C.Rs)
-	Stroke(sidebar, Theme.Border)
-	Frame(sidebar, Theme.Surface, UDim2.new(0, C.Rs, 1, 0), UDim2.new(1, -C.Rs, 0, 0), 3)
-	ListLayout(sidebar, C.Gap)
-	Pad(sidebar, 8, 8, 6, 6)
+	local dragHandle = MkBtn(topbar, {
+		Size     = UDim2.new(1, -80, 1, 0),
+		Position = UDim2.new(0, 0, 0, 0),
+		ZIndex   = 3,
+	})
+	do
+		local dragging = false
+		local origin   = Vector3.zero
+		local base     = UDim2.new()
+		TrackConn(dragHandle.InputBegan:Connect(function(i)
+			if i.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+			dragging = true
+			origin   = i.Position
+			base     = win.Position
+			TrackConn(i.Changed:Connect(function()
+				if i.UserInputState == Enum.UserInputState.End then dragging = false end
+			end))
+		end))
+		TrackConn(Svc.UserInputService.InputChanged:Connect(function(i)
+			if not dragging or i.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+			local d = i.Position - origin
+			win.Position = UDim2.new(base.X.Scale, base.X.Offset + d.X, base.Y.Scale, base.Y.Offset + d.Y)
+		end))
+	end
 
-	local content = Frame(body, Theme.Background,
-		UDim2.new(1, -C.TabListW, 1, 0),
-		UDim2.new(0, C.TabListW, 0, 0),
-		2
-	)
-	content.ClipsDescendants = false
+	local body = MkFrame(win, {
+		BackgroundColor3 = Theme.Background,
+		ClipsDescendants = true,
+		Size             = UDim2.new(1, 0, 1, -K.TopH),
+		Position         = UDim2.new(0, 0, 0, K.TopH),
+		ZIndex           = 2,
+	})
 
-	SetupDrag(topbar, win)
+	local sidebar = MkFrame(body, {
+		BackgroundColor3 = Theme.Surface,
+		Size             = UDim2.new(0, K.SideW, 1, 0),
+		ZIndex           = 3,
+	})
+	MkCorner(sidebar, K.Rs)
+	MkStroke(sidebar, Theme.Border)
+	MkFrame(sidebar, {
+		BackgroundColor3 = Theme.Surface,
+		Size             = UDim2.new(0, K.Rs, 1, 0),
+		Position         = UDim2.new(1, -K.Rs, 0, 0),
+		ZIndex           = 3,
+	})
+	MkList(sidebar, K.Gap)
+	MkPad(sidebar, 8, 8, 6, 6)
+
+	local content = MkFrame(body, {
+		BackgroundColor3 = Theme.Background,
+		ClipsDescendants = false,
+		Size             = UDim2.new(1, -K.SideW, 1, 0),
+		Position         = UDim2.new(0, K.SideW, 0, 0),
+		ZIndex           = 2,
+	})
 
 	local minimized = false
 	minBtn.MouseButton1Click:Connect(function()
+		minimized = not minimized
 		if minimized then
-			minimized    = false
-			body.Visible = true
-			Tw(win,    C.TM, {Size = UDim2.new(0, C.WindowW, 0, C.WindowH)})
-			Tw(shadow, C.TM, {Size = UDim2.new(0, C.WindowW + 48, 0, C.WindowH + 48)})
+			body.Visible = false
+			Tw(win, K.TM, {Size = UDim2.new(0, K.WinW, 0, K.TopH)})
 		else
-			minimized = true
-			Tw(win,    C.TM, {Size = UDim2.new(0, C.WindowW, 0, C.TopbarH)})
-			Tw(shadow, C.TM, {Size = UDim2.new(0, C.WindowW + 48, 0, C.TopbarH + 48)})
-			task.delay(0.3, function()
-				if minimized then body.Visible = false end
-			end)
+			body.Visible = true
+			Tw(win, K.TM, {Size = UDim2.new(0, K.WinW, 0, K.WinH)})
 		end
 	end)
 
 	local hidden = false
-	UserInputService.InputBegan:Connect(function(input, processed)
+	TrackConn(Svc.UserInputService.InputBegan:Connect(function(input, processed)
 		if processed then return end
 		if input.KeyCode == hideKey then
 			hidden         = not hidden
 			win.Visible    = not hidden
 			shadow.Visible = not hidden
 		end
-	end)
+	end))
 
-	local activeTab = nil
-	local tabBtns   = {}
-	local tabPages  = {}
+	local inputBeganHandlers = {}
+	local inputEndedHandlers = {}
+
+	TrackConn(Svc.UserInputService.InputBegan:Connect(function(input, processed)
+		for _, h in inputBeganHandlers do h(input, processed) end
+	end))
+	TrackConn(Svc.UserInputService.InputEnded:Connect(function(input)
+		for _, h in inputEndedHandlers do h(input) end
+	end))
+
+	local function RegisterInputBegan(id, fn)
+		inputBeganHandlers[id] = fn
+	end
+	local function RegisterInputEnded(id, fn)
+		inputEndedHandlers[id] = fn
+	end
+	local function UnregisterInput(id)
+		inputBeganHandlers[id] = nil
+		inputEndedHandlers[id] = nil
+	end
+
+	local inputId = 0
+	local function NextInputId()
+		inputId += 1
+		return tostring(inputId)
+	end
+
+	Tw(win,    K.TM, {BackgroundTransparency = 0})
+	Tw(shadow, K.TM, {ImageTransparency = 0.55})
 
 	function Window:CreateTab(name)
-		local btn = Btn(sidebar, UDim2.new(1, 0, 0, 30), UDim2.new(0, 0, 0, 0), 4)
-		btn.BackgroundTransparency = 1
-		Corner(btn, C.Rs)
+		assert(type(name) == "string" and #name > 0, "CreateTab: name must be a non-empty string")
+		tabCount += 1
+		local myOrder = tabCount
 
-		local pill = Frame(btn, Theme.Accent,
-			UDim2.new(0, 3, 0, 14),
-			UDim2.new(0, 0, 0.5, -7),
-			4
-		)
-		pill.BackgroundTransparency = 1
-		Corner(pill, 2)
+		local btn = MkBtn(sidebar, {
+			BackgroundTransparency = 1,
+			Size                   = UDim2.new(1, 0, 0, 30),
+			LayoutOrder            = myOrder,
+			ZIndex                 = 4,
+		})
+		MkCorner(btn, K.Rs)
 
-		local btnLbl = Label(btn, name, 12, Theme.TextSecondary, Enum.TextXAlignment.Left, 4)
-		btnLbl.Size     = UDim2.new(1, -14, 1, 0)
-		btnLbl.Position = UDim2.new(0, 10, 0, 0)
+		local pill = MkFrame(btn, {
+			BackgroundColor3     = Theme.Accent,
+			BackgroundTransparency = 1,
+			Size                 = UDim2.new(0, 3, 0, 14),
+			Position             = UDim2.new(0, 0, 0.5, -7),
+			ZIndex               = 4,
+		})
+		MkCorner(pill, 2)
 
-		local page = Frame(content, Theme.Background,
-			UDim2.new(1, 0, 1, 0),
-			UDim2.new(0, 0, 0, 0),
-			2
-		)
-		page.Visible          = false
-		page.ClipsDescendants = false
+		local btnLbl = MkLabel(btn, {
+			Text           = name,
+			TextSize       = 12,
+			TextColor3     = Theme.TextSecondary,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			Size           = UDim2.new(1, -14, 1, 0),
+			Position       = UDim2.new(0, 10, 0, 0),
+			ZIndex         = 4,
+		})
 
-		local scroll = Instance.new("ScrollingFrame")
-		scroll.BackgroundTransparency = 1
-		scroll.BorderSizePixel        = 0
-		scroll.Size                   = UDim2.new(1, 0, 1, 0)
-		scroll.CanvasSize             = UDim2.new(0, 0, 0, 0)
-		scroll.AutomaticCanvasSize    = Enum.AutomaticSize.Y
-		scroll.ScrollBarThickness     = 2
-		scroll.ScrollBarImageColor3   = Theme.BorderAccent
-		scroll.ScrollingDirection     = Enum.ScrollingDirection.Y
-		scroll.ElasticBehavior        = Enum.ElasticBehavior.Never
-		scroll.ZIndex                 = 2
-		scroll.Parent                 = page
-		ListLayout(scroll, C.Gap)
-		Pad(scroll, 10, 10, 10, 10)
+		local page = MkFrame(content, {
+			BackgroundColor3 = Theme.Background,
+			ClipsDescendants = false,
+			Size             = UDim2.new(1, 0, 1, 0),
+			Visible          = false,
+			ZIndex           = 2,
+		})
 
-		tabBtns[name]  = {btn = btn, lbl = btnLbl, pill = pill}
-		tabPages[name] = {page = page, scroll = scroll}
+		local scroll = New("ScrollingFrame", {
+			BackgroundTransparency = 1,
+			BorderSizePixel        = 0,
+			Size                   = UDim2.new(1, 0, 1, 0),
+			CanvasSize             = UDim2.new(0, 0, 0, 0),
+			AutomaticCanvasSize    = Enum.AutomaticSize.Y,
+			ScrollBarThickness     = 2,
+			ScrollBarImageColor3   = Theme.BorderAccent,
+			ScrollingDirection     = Enum.ScrollingDirection.Y,
+			ElasticBehavior        = Enum.ElasticBehavior.Never,
+			ZIndex                 = 2,
+			Parent                 = page,
+		})
+		MkList(scroll, K.Gap)
+		MkPad(scroll, 10, 10, 10, 10)
+
+		tabBtns[myOrder]  = {btn = btn, lbl = btnLbl, pill = pill}
+		tabPages[myOrder] = {page = page}
 
 		local function Activate()
-			if activeTab == name then return end
-			if activeTab and tabBtns[activeTab] then
+			if activeTab == myOrder then return end
+			if activeTab then
 				local prev = tabBtns[activeTab]
-				Tw(prev.btn,  C.TF, {BackgroundTransparency = 1})
-				Tw(prev.lbl,  C.TF, {TextColor3 = Theme.TextSecondary})
-				Tw(prev.pill, C.TF, {BackgroundTransparency = 1})
-				tabPages[activeTab].page.Visible = false
+				if prev then
+					Tw(prev.btn,  K.TF, {BackgroundTransparency = 1})
+					Tw(prev.lbl,  K.TF, {TextColor3 = Theme.TextSecondary})
+					Tw(prev.pill, K.TF, {BackgroundTransparency = 1})
+				end
+				if tabPages[activeTab] then
+					tabPages[activeTab].page.Visible = false
+				end
 			end
-			activeTab        = name
-			page.Visible     = true
-			Tw(btn,    C.TF, {BackgroundTransparency = 0.65})
-			Tw(btnLbl, C.TF, {TextColor3 = Theme.TextPrimary})
-			Tw(pill,   C.TF, {BackgroundTransparency = 0})
+			activeTab    = myOrder
+			page.Visible = true
+			Tw(btn,    K.TF, {BackgroundTransparency = 0.65})
+			Tw(btnLbl, K.TF, {TextColor3 = Theme.TextPrimary})
+			Tw(pill,   K.TF, {BackgroundTransparency = 0})
 		end
 
 		btn.MouseButton1Click:Connect(Activate)
 		btn.MouseEnter:Connect(function()
-			if activeTab == name then return end
-			Tw(btn,    C.TF, {BackgroundTransparency = 0.82})
-			Tw(btnLbl, C.TF, {TextColor3 = Color3.fromRGB(155, 155, 170)})
+			if activeTab == myOrder then return end
+			Tw(btn,    K.TF, {BackgroundTransparency = 0.82})
+			Tw(btnLbl, K.TF, {TextColor3 = Color3.fromRGB(155, 155, 170)})
 		end)
 		btn.MouseLeave:Connect(function()
-			if activeTab == name then return end
-			Tw(btn,    C.TF, {BackgroundTransparency = 1})
-			Tw(btnLbl, C.TF, {TextColor3 = Theme.TextSecondary})
+			if activeTab == myOrder then return end
+			Tw(btn,    K.TF, {BackgroundTransparency = 1})
+			Tw(btnLbl, K.TF, {TextColor3 = Theme.TextSecondary})
 		end)
 
 		if not activeTab then Activate() end
@@ -482,286 +560,304 @@ function Noctaer:CreateWindow(opts)
 		local sc = scroll
 
 		local function El(h)
-			local f = Frame(sc, Theme.Surface, UDim2.new(1, 0, 0, h or C.ElH))
-			Corner(f, C.Rs)
-			Stroke(f, Theme.Border)
+			local f = MkFrame(sc, {
+				BackgroundColor3 = Theme.Surface,
+				Size             = UDim2.new(1, 0, 0, h or K.ElH),
+			})
+			MkCorner(f, K.Rs)
+			MkStroke(f, Theme.Border)
 			return f
+		end
+
+		local function HoverEl(el)
+			el.MouseEnter:Connect(function() Tw(el, K.TF, {BackgroundColor3 = Theme.SurfaceHover}) end)
+			el.MouseLeave:Connect(function() Tw(el, K.TF, {BackgroundColor3 = Theme.Surface}) end)
+		end
+
+		local function FireCallback(cb, ...)
+			local ok, err = pcall(cb, ...)
+			if not ok then Window:Notify({Title = "Callback Error", Content = tostring(err), Duration = 4}) end
+		end
+
+		local function MkNameLabel(parent, text, h, desc)
+			local yPos = desc and 8 or (math.floor(h / 2) - 9)
+			return MkLabel(parent, {
+				Text           = text,
+				TextSize       = 13,
+				TextColor3     = Theme.TextPrimary,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Size           = UDim2.new(1, -(K.Pad * 2 + 80), 0, 18),
+				Position       = UDim2.new(0, K.Pad, 0, yPos),
+			})
+		end
+
+		local function MkDescLabel(parent, desc)
+			if desc == "" then return end
+			MkLabel(parent, {
+				Text           = desc,
+				TextSize       = 11,
+				TextColor3     = Theme.TextSecondary,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Size           = UDim2.new(1, -(K.Pad * 2 + 80), 0, 14),
+				Position       = UDim2.new(0, K.Pad, 0, 28),
+			})
 		end
 
 		local Tab = {}
 
 		function Tab:CreateSection(title)
-			local sec = Frame(sc, Color3.new(), UDim2.new(1, 0, 0, 26))
-			sec.BackgroundTransparency = 1
-
-			local lbl = Instance.new("TextLabel")
-			lbl.BackgroundTransparency = 1
-			lbl.Text           = title:upper()
-			lbl.TextSize       = 10
-			lbl.Font           = Enum.Font.GothamBold
-			lbl.TextColor3     = Theme.TextMuted
-			lbl.LetterSpacing  = 2
-			lbl.TextXAlignment = Enum.TextXAlignment.Left
-			lbl.TextYAlignment = Enum.TextYAlignment.Center
-			lbl.Size           = UDim2.new(0, 80, 1, 0)
-			lbl.Position       = UDim2.new(0, 2, 0, 0)
-			lbl.Parent         = sec
-
-			Frame(sec, Theme.Border, UDim2.new(1, -88, 0, 1), UDim2.new(0, 84, 0.5, 0))
+			assert(type(title) == "string", "CreateSection: title must be a string")
+			local sec = MkFrame(sc, {
+				BackgroundTransparency = 1,
+				Size                   = UDim2.new(1, 0, 0, 26),
+			})
+			MkLabel(sec, {
+				Text           = title:upper(),
+				TextSize       = 10,
+				Font           = Enum.Font.GothamBold,
+				TextColor3     = Theme.TextMuted,
+				LetterSpacing  = 2,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Size           = UDim2.new(0, 80, 1, 0),
+				Position       = UDim2.new(0, 2, 0, 0),
+			})
+			MkFrame(sec, {
+				BackgroundColor3 = Theme.Border,
+				Size             = UDim2.new(1, -88, 0, 1),
+				Position         = UDim2.new(0, 84, 0.5, 0),
+			})
 		end
 
 		function Tab:CreateButton(opts)
-			local label = opts.Name        or "Button"
-			local desc  = opts.Description or ""
-			local cb    = opts.Callback    or function() end
-			local h     = desc ~= "" and 50 or C.ElH
+			assert(type(opts) == "table", "CreateButton: opts must be a table")
+			local label = tostring(opts.Name        or "Button")
+			local desc  = tostring(opts.Description or "")
+			local cb    = opts.Callback             or function() end
+			local h     = desc ~= "" and 50 or K.ElH
 
 			local el = El(h)
+			HoverEl(el)
+			MkNameLabel(el, label, h, desc ~= "")
+			MkDescLabel(el, desc)
 
-			local nameL = Instance.new("TextLabel")
-			nameL.BackgroundTransparency = 1
-			nameL.Text           = label
-			nameL.TextSize       = 13
-			nameL.Font           = Enum.Font.Gotham
-			nameL.TextColor3     = Theme.TextPrimary
-			nameL.TextXAlignment = Enum.TextXAlignment.Left
-			nameL.TextYAlignment = Enum.TextYAlignment.Center
-			nameL.Size           = UDim2.new(1, -(52 + C.ElPad * 3), 0, 18)
-			nameL.Position       = UDim2.new(0, C.ElPad, 0, desc ~= "" and 8 or (math.floor(h / 2) - 9))
-			nameL.Parent         = el
+			local runF = MkFrame(el, {
+				BackgroundColor3 = Theme.Accent,
+				Size             = UDim2.new(0, 52, 0, 24),
+				Position         = UDim2.new(1, -(52 + K.Pad), 0.5, -12),
+			})
+			MkCorner(runF, 4)
+			MkLabel(runF, {
+				Text           = "Run",
+				TextSize       = 11,
+				Font           = Enum.Font.GothamBold,
+				TextColor3     = Theme.TextPrimary,
+				TextXAlignment = Enum.TextXAlignment.Center,
+			})
 
-			if desc ~= "" then
-				local dl = Instance.new("TextLabel")
-				dl.BackgroundTransparency = 1
-				dl.Text           = desc
-				dl.TextSize       = 11
-				dl.Font           = Enum.Font.Gotham
-				dl.TextColor3     = Theme.TextSecondary
-				dl.TextXAlignment = Enum.TextXAlignment.Left
-				dl.TextYAlignment = Enum.TextYAlignment.Center
-				dl.Size           = UDim2.new(1, -(52 + C.ElPad * 3), 0, 14)
-				dl.Position       = UDim2.new(0, C.ElPad, 0, 28)
-				dl.Parent         = el
-			end
-
-			local runF = Frame(el, Theme.Accent,
-				UDim2.new(0, 52, 0, 24),
-				UDim2.new(1, -(52 + C.ElPad), 0.5, -12)
-			)
-			Corner(runF, 4)
-			local runL = Label(runF, "Run", 11, Theme.TextPrimary, Enum.TextXAlignment.Center)
-			runL.Font = Enum.Font.GothamBold
-
-			local hit = Btn(el, UDim2.new(1, 0, 1, 0), nil, 5)
+			local hit = MkBtn(el, {Size = UDim2.new(1, 0, 1, 0), ZIndex = 5})
 			hit.MouseEnter:Connect(function()
-				Tw(el,   C.TF, {BackgroundColor3 = Theme.SurfaceHover})
-				Tw(runF, C.TF, {BackgroundColor3 = Theme.AccentDim})
+				Tw(el,   K.TF, {BackgroundColor3 = Theme.SurfaceHover})
+				Tw(runF, K.TF, {BackgroundColor3 = Theme.AccentDim})
 			end)
 			hit.MouseLeave:Connect(function()
-				Tw(el,   C.TF, {BackgroundColor3 = Theme.Surface})
-				Tw(runF, C.TF, {BackgroundColor3 = Theme.Accent})
+				Tw(el,   K.TF, {BackgroundColor3 = Theme.Surface})
+				Tw(runF, K.TF, {BackgroundColor3 = Theme.Accent})
 			end)
 			hit.MouseButton1Click:Connect(function()
-				Tw(runF, C.TF, {BackgroundColor3 = Color3.fromRGB(70, 72, 180)})
-				task.delay(0.15, function()
-					if runF and runF.Parent then Tw(runF, C.TF, {BackgroundColor3 = Theme.Accent}) end
+				Tw(runF, K.TF, {BackgroundColor3 = Color3.fromRGB(70, 72, 180)})
+				task.delay(K.TF.Time, function()
+					if IsAlive(runF) then Tw(runF, K.TF, {BackgroundColor3 = Theme.Accent}) end
 				end)
-				task.spawn(function()
-					local ok, err = pcall(cb)
-					if not ok then Window:Notify({Title = "Error", Content = tostring(err), Duration = 4}) end
-				end)
+				task.spawn(FireCallback, cb)
 			end)
 
 			local O = {}
-			function O:SetLabel(s) nameL.Text = s end
+			function O:SetLabel(s) el.Name = s end
 			return O
 		end
 
 		function Tab:CreateToggle(opts)
-			local label   = opts.Name         or "Toggle"
-			local desc    = opts.Description  or ""
-			local default = opts.CurrentValue or false
+			assert(type(opts) == "table", "CreateToggle: opts must be a table")
+			local label   = tostring(opts.Name         or "Toggle")
+			local desc    = tostring(opts.Description  or "")
 			local flag    = opts.Flag
-			local cb      = opts.Callback     or function() end
-			local h       = desc ~= "" and 50 or C.ElH
+			local cb      = opts.Callback              or function() end
+			local h       = desc ~= "" and 50 or K.ElH
+
+			local default
+			if opts.CurrentValue ~= nil then
+				default = opts.CurrentValue
+			else
+				default = false
+			end
 
 			local el  = El(h)
 			local val = default
 
-			local nameL = Instance.new("TextLabel")
-			nameL.BackgroundTransparency = 1
-			nameL.Text           = label
-			nameL.TextSize       = 13
-			nameL.Font           = Enum.Font.Gotham
-			nameL.TextColor3     = Theme.TextPrimary
-			nameL.TextXAlignment = Enum.TextXAlignment.Left
-			nameL.TextYAlignment = Enum.TextYAlignment.Center
-			nameL.Size           = UDim2.new(1, -(36 + C.ElPad * 3), 0, 18)
-			nameL.Position       = UDim2.new(0, C.ElPad, 0, desc ~= "" and 8 or (math.floor(h / 2) - 9))
-			nameL.Parent         = el
+			MkLabel(el, {
+				Text           = label,
+				TextSize       = 13,
+				TextColor3     = Theme.TextPrimary,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Size           = UDim2.new(1, -(36 + K.Pad * 3), 0, 18),
+				Position       = UDim2.new(0, K.Pad, 0, desc ~= "" and 8 or (math.floor(h / 2) - 9)),
+			})
+			MkDescLabel(el, desc)
 
-			if desc ~= "" then
-				local dl = Instance.new("TextLabel")
-				dl.BackgroundTransparency = 1
-				dl.Text           = desc
-				dl.TextSize       = 11
-				dl.Font           = Enum.Font.Gotham
-				dl.TextColor3     = Theme.TextSecondary
-				dl.TextXAlignment = Enum.TextXAlignment.Left
-				dl.TextYAlignment = Enum.TextYAlignment.Center
-				dl.Size           = UDim2.new(1, -(36 + C.ElPad * 3), 0, 14)
-				dl.Position       = UDim2.new(0, C.ElPad, 0, 28)
-				dl.Parent         = el
-			end
+			local track = MkFrame(el, {
+				BackgroundColor3 = Theme.ToggleOff,
+				Size             = UDim2.new(0, 36, 0, 20),
+				Position         = UDim2.new(1, -(36 + K.Pad), 0.5, -10),
+			})
+			MkCorner(track, 10)
+			MkStroke(track, Theme.Border)
 
-			local track = Frame(el, Theme.ToggleOff,
-				UDim2.new(0, 36, 0, 20),
-				UDim2.new(1, -(36 + C.ElPad), 0.5, -10)
-			)
-			Corner(track, 10)
-			Stroke(track, Theme.Border)
-
-			local knob = Frame(track, Theme.TextSecondary,
-				UDim2.new(0, 14, 0, 14),
-				UDim2.new(0, 3, 0.5, -7)
-			)
-			Corner(knob, 7)
+			local knob = MkFrame(track, {
+				BackgroundColor3 = Theme.TextSecondary,
+				Size             = UDim2.new(0, 14, 0, 14),
+				Position         = UDim2.new(0, 3, 0.5, -7),
+			})
+			MkCorner(knob, 7)
 
 			local function SetVal(v, fire)
 				val = v
 				if v then
-					Tw(track, C.TF, {BackgroundColor3 = Theme.ToggleOn})
-					Tw(knob,  C.TF, {Position = UDim2.new(0, 19, 0.5, -7), BackgroundColor3 = Color3.new(1, 1, 1)})
+					Tw(track, K.TF, {BackgroundColor3 = Theme.ToggleOn})
+					Tw(knob,  K.TF, {Position = UDim2.new(0, 19, 0.5, -7), BackgroundColor3 = Color3.new(1,1,1)})
 				else
-					Tw(track, C.TF, {BackgroundColor3 = Theme.ToggleOff})
-					Tw(knob,  C.TF, {Position = UDim2.new(0, 3, 0.5, -7), BackgroundColor3 = Theme.TextSecondary})
+					Tw(track, K.TF, {BackgroundColor3 = Theme.ToggleOff})
+					Tw(knob,  K.TF, {Position = UDim2.new(0, 3, 0.5, -7), BackgroundColor3 = Theme.TextSecondary})
 				end
-				if fire then
-					task.spawn(function()
-						local ok, err = pcall(cb, val)
-						if not ok then Window:Notify({Title = "Error", Content = tostring(err), Duration = 4}) end
-					end)
-				end
+				if fire then task.spawn(FireCallback, cb, val) end
 			end
 
 			SetVal(default, false)
 
-			local hit = Btn(el, UDim2.new(1, 0, 1, 0), nil, 5)
-			hit.MouseEnter:Connect(function() Tw(el, C.TF, {BackgroundColor3 = Theme.SurfaceHover}) end)
-			hit.MouseLeave:Connect(function() Tw(el, C.TF, {BackgroundColor3 = Theme.Surface}) end)
+			local hit = MkBtn(el, {Size = UDim2.new(1, 0, 1, 0), ZIndex = 5})
+			HoverEl(el)
 			hit.MouseButton1Click:Connect(function() SetVal(not val, true) end)
 
 			local O = {}
-			function O:Set(v) SetVal(v, true) end
+			function O:Set(v) SetVal(v == true, true) end
 			function O:Get() return val end
 			if flag then Noctaer.Flags[flag] = O end
 			return O
 		end
 
 		function Tab:CreateSlider(opts)
-			local label   = opts.Name         or "Slider"
-			local min     = (opts.Range and opts.Range[1]) or 0
-			local max     = (opts.Range and opts.Range[2]) or 100
-			local inc     = opts.Increment    or 1
-			local suffix  = opts.Suffix       or ""
-			local default = opts.CurrentValue or min
-			local flag    = opts.Flag
-			local cb      = opts.Callback     or function() end
+			assert(type(opts) == "table", "CreateSlider: opts must be a table")
+			local label  = tostring(opts.Name      or "Slider")
+			local rng    = opts.Range              or {0, 100}
+			local minV   = tonumber(rng[1])        or 0
+			local maxV   = tonumber(rng[2])        or 100
+			local inc    = tonumber(opts.Increment) or 1
+			local suffix = tostring(opts.Suffix    or "")
+			local flag   = opts.Flag
+			local cb     = opts.Callback           or function() end
+
+			assert(minV < maxV, "CreateSlider: Range[1] must be less than Range[2]")
+
+			local default
+			if opts.CurrentValue ~= nil then
+				default = math.clamp(tonumber(opts.CurrentValue) or minV, minV, maxV)
+			else
+				default = minV
+			end
 
 			local el  = El(54)
 			local val = default
 
-			local nameL = Instance.new("TextLabel")
-			nameL.BackgroundTransparency = 1
-			nameL.Text           = label
-			nameL.TextSize       = 13
-			nameL.Font           = Enum.Font.Gotham
-			nameL.TextColor3     = Theme.TextPrimary
-			nameL.TextXAlignment = Enum.TextXAlignment.Left
-			nameL.TextYAlignment = Enum.TextYAlignment.Center
-			nameL.Size           = UDim2.new(0.55, -C.ElPad, 0, 18)
-			nameL.Position       = UDim2.new(0, C.ElPad, 0, 8)
-			nameL.Parent         = el
+			MkLabel(el, {
+				Text           = label,
+				TextSize       = 13,
+				TextColor3     = Theme.TextPrimary,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Size           = UDim2.new(0.55, -K.Pad, 0, 18),
+				Position       = UDim2.new(0, K.Pad, 0, 8),
+			})
+			local valL = MkLabel(el, {
+				TextSize       = 12,
+				Font           = Enum.Font.GothamBold,
+				TextColor3     = Theme.Accent,
+				TextXAlignment = Enum.TextXAlignment.Right,
+				Size           = UDim2.new(0.45, -K.Pad, 0, 18),
+				Position       = UDim2.new(0.55, 0, 0, 8),
+			})
 
-			local valL = Instance.new("TextLabel")
-			valL.BackgroundTransparency = 1
-			valL.TextSize       = 12
-			valL.Font           = Enum.Font.GothamBold
-			valL.TextColor3     = Theme.Accent
-			valL.TextXAlignment = Enum.TextXAlignment.Right
-			valL.TextYAlignment = Enum.TextYAlignment.Center
-			valL.Size           = UDim2.new(0.45, -C.ElPad, 0, 18)
-			valL.Position       = UDim2.new(0.55, 0, 0, 8)
-			valL.Parent         = el
+			local track = MkFrame(el, {
+				BackgroundColor3 = Theme.SliderTrack,
+				Size             = UDim2.new(1, -(K.Pad * 2), 0, 4),
+				Position         = UDim2.new(0, K.Pad, 0, 36),
+			})
+			MkCorner(track, 2)
+			MkStroke(track, Theme.Border)
 
-			local track = Frame(el, Theme.SliderTrack,
-				UDim2.new(1, -(C.ElPad * 2), 0, 4),
-				UDim2.new(0, C.ElPad, 0, 36)
-			)
-			Corner(track, 2)
-			Stroke(track, Theme.Border)
+			local fill = MkFrame(track, {
+				BackgroundColor3 = Theme.SliderFill,
+				Size             = UDim2.new(0, 0, 1, 0),
+			})
+			MkCorner(fill, 2)
 
-			local fill = Frame(track, Theme.SliderFill, UDim2.new(0, 0, 1, 0))
-			Corner(fill, 2)
-
-			local thumb = Frame(track, Theme.TextPrimary,
-				UDim2.new(0, 12, 0, 12),
-				UDim2.new(0, -6, 0.5, -6)
-			)
-			Corner(thumb, 6)
-			Stroke(thumb, Theme.Accent)
+			local thumb = MkFrame(track, {
+				BackgroundColor3 = Theme.TextPrimary,
+				Size             = UDim2.new(0, 12, 0, 12),
+				Position         = UDim2.new(0, -6, 0.5, -6),
+			})
+			MkCorner(thumb, 6)
+			MkStroke(thumb, Theme.Accent)
 
 			local dragging = false
+			local iid      = NextInputId()
 
 			local function SetVal(v, fire)
-				v   = math.clamp(v, min, max)
+				v   = math.clamp(v, minV, maxV)
 				v   = math.floor(v / inc + 0.5) * inc
 				val = v
-				local pct = (v - min) / (max - min)
-				Tw(fill,  C.TF, {Size     = UDim2.new(pct, 0, 1, 0)})
-				Tw(thumb, C.TF, {Position = UDim2.new(pct, -6, 0.5, -6)})
+				local pct = (v - minV) / (maxV - minV)
+				Tw(fill,  K.TF, {Size     = UDim2.new(pct, 0, 1, 0)})
+				Tw(thumb, K.TF, {Position = UDim2.new(pct, -6, 0.5, -6)})
 				valL.Text = tostring(v) .. (suffix ~= "" and (" " .. suffix) or "")
-				if fire then
-					task.spawn(function()
-						local ok, err = pcall(cb, val)
-						if not ok then Window:Notify({Title = "Error", Content = tostring(err), Duration = 4}) end
-					end)
-				end
+				if fire then task.spawn(FireCallback, cb, val) end
 			end
 
 			SetVal(default, false)
 
-			local hitArea = Btn(track,
-				UDim2.new(1, 24, 1, 24),
-				UDim2.new(0, -12, 0, -12),
-				5
-			)
+			local hitArea = MkBtn(track, {
+				Size     = UDim2.new(1, 24, 1, 24),
+				Position = UDim2.new(0, -12, 0, -12),
+				ZIndex   = 5,
+			})
 
-			local conn
 			hitArea.InputBegan:Connect(function(i)
 				if i.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
 				dragging = true
+			end)
+
+			local conn
+			hitArea.MouseButton1Down:Connect(function()
+				dragging = true
 				if conn then conn:Disconnect() end
-				conn = RunService.Heartbeat:Connect(function()
+				conn = Svc.RunService.Heartbeat:Connect(function()
 					if not dragging then
 						conn:Disconnect()
 						conn = nil
 						return
 					end
-					local mx  = UserInputService:GetMouseLocation().X
-					local tx  = track.AbsolutePosition.X
-					local tw  = track.AbsoluteSize.X
-					SetVal(min + math.clamp((mx - tx) / tw, 0, 1) * (max - min), true)
+					local mx = Svc.UserInputService:GetMouseLocation().X
+					local tx = track.AbsolutePosition.X
+					local tw = track.AbsoluteSize.X
+					if tw <= 0 then return end
+					SetVal(minV + math.clamp((mx - tx) / tw, 0, 1) * (maxV - minV), true)
 				end)
 			end)
-			UserInputService.InputEnded:Connect(function(i)
+
+			RegisterInputEnded(iid, function(i)
 				if i.UserInputType == Enum.UserInputType.MouseButton1 then
 					dragging = false
 				end
 			end)
 
-			el.MouseEnter:Connect(function() Tw(el, C.TF, {BackgroundColor3 = Theme.SurfaceHover}) end)
-			el.MouseLeave:Connect(function() Tw(el, C.TF, {BackgroundColor3 = Theme.Surface}) end)
+			HoverEl(el)
 
 			local O = {}
 			function O:Set(v) SetVal(v, true) end
@@ -771,77 +867,96 @@ function Noctaer:CreateWindow(opts)
 		end
 
 		function Tab:CreateDropdown(opts)
-			local label   = opts.Name           or "Dropdown"
-			local options = opts.Options         or {}
-			local multi   = opts.MultipleOptions or false
-			local default = opts.CurrentOption   or (multi and {} or (options[1] and {options[1]} or {}))
+			assert(type(opts) == "table", "CreateDropdown: opts must be a table")
+			local label   = tostring(opts.Name           or "Dropdown")
+			local options = opts.Options                 or {}
+			local multi   = opts.MultipleOptions         or false
 			local flag    = opts.Flag
-			local cb      = opts.Callback        or function() end
+			local cb      = opts.Callback                or function() end
 
-			if type(default) == "string" then default = {default} end
+			local rawDefault = opts.CurrentOption
+			local default
+			if rawDefault == nil then
+				default = multi and {} or (options[1] and {options[1]} or {})
+			elseif type(rawDefault) == "string" then
+				default = {rawDefault}
+			else
+				default = rawDefault
+			end
 
 			local selected  = {table.unpack(default)}
 			local collapsed = true
 			local ROW_H     = 28
 			local optH      = math.min(#options, 5) * ROW_H + 8
 
-			local wrapper = Frame(sc, Color3.new(), UDim2.new(1, 0, 0, C.ElH))
-			wrapper.BackgroundTransparency = 1
-			wrapper.ClipsDescendants       = false
+			local wrapper = MkFrame(sc, {
+				BackgroundTransparency = 1,
+				ClipsDescendants       = false,
+				Size                   = UDim2.new(1, 0, 0, K.ElH),
+			})
 
-			local el = Frame(wrapper, Theme.Surface,
-				UDim2.new(1, 0, 0, C.ElH),
-				UDim2.new(0, 0, 0, 0),
-				3
-			)
-			Corner(el, C.Rs)
-			Stroke(el, Theme.Border)
+			local el = MkFrame(wrapper, {
+				BackgroundColor3 = Theme.Surface,
+				Size             = UDim2.new(1, 0, 0, K.ElH),
+				ZIndex           = 3,
+			})
+			MkCorner(el, K.Rs)
+			MkStroke(el, Theme.Border)
 
-			local nameL = Label(el, label, 13, Theme.TextPrimary, Enum.TextXAlignment.Left, 4)
-			nameL.Size     = UDim2.new(0.48, 0, 1, 0)
-			nameL.Position = UDim2.new(0, C.ElPad, 0, 0)
+			MkLabel(el, {
+				Text           = label,
+				TextSize       = 13,
+				TextColor3     = Theme.TextPrimary,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Size           = UDim2.new(0.48, 0, 1, 0),
+				Position       = UDim2.new(0, K.Pad, 0, 0),
+				ZIndex         = 4,
+			})
+			local selL = MkLabel(el, {
+				TextSize       = 12,
+				TextColor3     = Theme.TextSecondary,
+				TextXAlignment = Enum.TextXAlignment.Right,
+				Size           = UDim2.new(0.38, -(16 + K.Pad), 1, 0),
+				Position       = UDim2.new(0.48, 0, 0, 0),
+				ZIndex         = 4,
+			})
+			local arrow = MkLabel(el, {
+				Text           = "›",
+				TextSize       = 16,
+				Font           = Enum.Font.GothamBold,
+				TextColor3     = Theme.TextMuted,
+				TextXAlignment = Enum.TextXAlignment.Center,
+				Rotation       = 90,
+				Size           = UDim2.new(0, 16, 1, 0),
+				Position       = UDim2.new(1, -24, 0, 0),
+				ZIndex         = 4,
+			})
 
-			local selL = Label(el, "", 12, Theme.TextSecondary, Enum.TextXAlignment.Right, 4)
-			selL.Size     = UDim2.new(0.38, -(16 + C.ElPad), 1, 0)
-			selL.Position = UDim2.new(0.48, 0, 0, 0)
+			local dropList = MkFrame(wrapper, {
+				BackgroundColor3 = Theme.Surface,
+				ClipsDescendants = true,
+				Size             = UDim2.new(1, 0, 0, 0),
+				Position         = UDim2.new(0, 0, 0, K.ElH + 2),
+				ZIndex           = 20,
+			})
+			MkCorner(dropList, K.Rs)
+			MkStroke(dropList, Theme.BorderAccent)
 
-			local arrow = Instance.new("TextLabel")
-			arrow.BackgroundTransparency = 1
-			arrow.Text           = "›"
-			arrow.TextSize       = 16
-			arrow.Font           = Enum.Font.GothamBold
-			arrow.TextColor3     = Theme.TextMuted
-			arrow.TextXAlignment = Enum.TextXAlignment.Center
-			arrow.TextYAlignment = Enum.TextYAlignment.Center
-			arrow.Rotation       = 90
-			arrow.Size           = UDim2.new(0, 16, 1, 0)
-			arrow.Position       = UDim2.new(1, -(16 + 8), 0, 0)
-			arrow.ZIndex         = 4
-			arrow.Parent         = el
+			local listScroll = New("ScrollingFrame", {
+				BackgroundTransparency = 1,
+				BorderSizePixel        = 0,
+				Size                   = UDim2.new(1, 0, 1, 0),
+				CanvasSize             = UDim2.new(0, 0, 0, 0),
+				AutomaticCanvasSize    = Enum.AutomaticSize.Y,
+				ScrollBarThickness     = 2,
+				ScrollBarImageColor3   = Theme.BorderAccent,
+				ZIndex                 = 20,
+				Parent                 = dropList,
+			})
+			MkList(listScroll, 0)
+			MkPad(listScroll, 4, 4, 4, 4)
 
-			local dropList = Frame(wrapper, Theme.Surface,
-				UDim2.new(1, 0, 0, 0),
-				UDim2.new(0, 0, 0, C.ElH + 2),
-				20
-			)
-			dropList.ClipsDescendants = true
-			Corner(dropList, C.Rs)
-			Stroke(dropList, Theme.BorderAccent)
-
-			local listScroll = Instance.new("ScrollingFrame")
-			listScroll.BackgroundTransparency = 1
-			listScroll.BorderSizePixel        = 0
-			listScroll.Size                   = UDim2.new(1, 0, 1, 0)
-			listScroll.CanvasSize             = UDim2.new(0, 0, 0, 0)
-			listScroll.AutomaticCanvasSize    = Enum.AutomaticSize.Y
-			listScroll.ScrollBarThickness     = 2
-			listScroll.ScrollBarImageColor3   = Theme.BorderAccent
-			listScroll.ZIndex                 = 20
-			listScroll.Parent                 = dropList
-			ListLayout(listScroll, 0)
-			Pad(listScroll, 4, 4, 4, 4)
-
-			local optBtns = {}
+			local optEntries = {}
 
 			local function UpdateLabel()
 				if #selected == 0 then
@@ -854,54 +969,66 @@ function Noctaer:CreateWindow(opts)
 			end
 
 			local function RefreshColors()
-				for _, e in ipairs(optBtns) do
+				for _, e in optEntries do
 					local on = table.find(selected, e.name) ~= nil
-					Tw(e.frame, C.TF, {
-						BackgroundColor3       = on and Theme.AccentDim or Color3.new(),
-						BackgroundTransparency = on and 0 or 1,
-					})
-					Tw(e.lbl, C.TF, {TextColor3 = on and Theme.TextPrimary or Theme.TextSecondary})
+					e.frame.BackgroundColor3       = on and Theme.AccentDim or Color3.new()
+					e.frame.BackgroundTransparency = on and 0 or 1
+					e.lbl.TextColor3               = on and Theme.TextPrimary or Theme.TextSecondary
 				end
 			end
 
-			for _, opt in ipairs(options) do
-				local row = Frame(listScroll, Color3.new(), UDim2.new(1, 0, 0, ROW_H))
-				row.BackgroundTransparency = 1
-				row.ZIndex = 21
-				Corner(row, 4)
+			local function SetCollapsed(c)
+				collapsed = c
+				if c then
+					Tw(dropList, K.TM, {Size = UDim2.new(1, 0, 0, 0)})
+					Tw(wrapper,  K.TM, {Size = UDim2.new(1, 0, 0, K.ElH)})
+					Tw(arrow,    K.TF, {Rotation = 90})
+				else
+					Tw(dropList, K.TM, {Size = UDim2.new(1, 0, 0, optH)})
+					Tw(wrapper,  K.TM, {Size = UDim2.new(1, 0, 0, K.ElH + optH + 2)})
+					Tw(arrow,    K.TF, {Rotation = -90})
+				end
+			end
 
-				local rl = Label(row, opt, 12, Theme.TextSecondary, Enum.TextXAlignment.Left, 21)
-				rl.Size     = UDim2.new(1, -16, 1, 0)
-				rl.Position = UDim2.new(0, 8, 0, 0)
-
-				local rb = Btn(row, UDim2.new(1, 0, 1, 0), nil, 22)
-				table.insert(optBtns, {name = opt, frame = row, lbl = rl})
+			for _, opt in options do
+				local row = MkFrame(listScroll, {
+					BackgroundTransparency = 1,
+					Size                   = UDim2.new(1, 0, 0, ROW_H),
+					ZIndex                 = 21,
+				})
+				MkCorner(row, 4)
+				local rl = MkLabel(row, {
+					Text           = opt,
+					TextSize       = 12,
+					TextColor3     = Theme.TextSecondary,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					Size           = UDim2.new(1, -16, 1, 0),
+					Position       = UDim2.new(0, 8, 0, 0),
+					ZIndex         = 21,
+				})
+				local rb = MkBtn(row, {Size = UDim2.new(1, 0, 1, 0), ZIndex = 22})
+				table.insert(optEntries, {name = opt, frame = row, lbl = rl})
 
 				rb.MouseEnter:Connect(function()
 					if table.find(selected, opt) then return end
-					Tw(row, C.TF, {BackgroundTransparency = 0.8, BackgroundColor3 = Theme.SurfaceHover})
+					row.BackgroundTransparency = 0.8
+					row.BackgroundColor3       = Theme.SurfaceHover
 				end)
 				rb.MouseLeave:Connect(function()
 					if table.find(selected, opt) then return end
-					Tw(row, C.TF, {BackgroundTransparency = 1})
+					row.BackgroundTransparency = 1
 				end)
 				rb.MouseButton1Click:Connect(function()
 					if multi then
 						local idx = table.find(selected, opt)
 						if idx then table.remove(selected, idx) else table.insert(selected, opt) end
 					else
-						selected  = {opt}
-						collapsed = true
-						Tw(dropList, C.TM, {Size = UDim2.new(1, 0, 0, 0)})
-						Tw(wrapper,  C.TM, {Size = UDim2.new(1, 0, 0, C.ElH)})
-						Tw(arrow,    C.TF, {Rotation = 90})
+						selected = {opt}
+						SetCollapsed(true)
 					end
 					UpdateLabel()
 					RefreshColors()
-					task.spawn(function()
-						local ok, err = pcall(cb, multi and selected or selected[1])
-						if not ok then Window:Notify({Title = "Error", Content = tostring(err), Duration = 4}) end
-					end)
+					task.spawn(FireCallback, cb, multi and selected or selected[1])
 					if flag then Noctaer.Flags[flag] = {CurrentOption = selected} end
 				end)
 			end
@@ -909,21 +1036,10 @@ function Noctaer:CreateWindow(opts)
 			UpdateLabel()
 			RefreshColors()
 
-			local hit = Btn(el, UDim2.new(1, 0, 1, 0), nil, 5)
-			hit.MouseEnter:Connect(function() Tw(el, C.TF, {BackgroundColor3 = Theme.SurfaceHover}) end)
-			hit.MouseLeave:Connect(function() Tw(el, C.TF, {BackgroundColor3 = Theme.Surface}) end)
-			hit.MouseButton1Click:Connect(function()
-				collapsed = not collapsed
-				if not collapsed then
-					Tw(dropList, C.TM, {Size = UDim2.new(1, 0, 0, optH)})
-					Tw(wrapper,  C.TM, {Size = UDim2.new(1, 0, 0, C.ElH + optH + 2)})
-					Tw(arrow,    C.TF, {Rotation = -90})
-				else
-					Tw(dropList, C.TM, {Size = UDim2.new(1, 0, 0, 0)})
-					Tw(wrapper,  C.TM, {Size = UDim2.new(1, 0, 0, C.ElH)})
-					Tw(arrow,    C.TF, {Rotation = 90})
-				end
-			end)
+			local hit = MkBtn(el, {Size = UDim2.new(1, 0, 1, 0), ZIndex = 5})
+			hit.MouseEnter:Connect(function() Tw(el, K.TF, {BackgroundColor3 = Theme.SurfaceHover}) end)
+			hit.MouseLeave:Connect(function() Tw(el, K.TF, {BackgroundColor3 = Theme.Surface}) end)
+			hit.MouseButton1Click:Connect(function() SetCollapsed(not collapsed) end)
 
 			local O = {}
 			function O:Set(v)
@@ -931,7 +1047,7 @@ function Noctaer:CreateWindow(opts)
 				selected = v
 				UpdateLabel()
 				RefreshColors()
-				task.spawn(pcall, cb, multi and selected or selected[1])
+				task.spawn(FireCallback, cb, multi and selected or selected[1])
 			end
 			function O:Get() return multi and selected or selected[1] end
 			if flag then Noctaer.Flags[flag] = O end
@@ -939,55 +1055,58 @@ function Noctaer:CreateWindow(opts)
 		end
 
 		function Tab:CreateInput(opts)
-			local label = opts.Name                     or "Input"
-			local ph    = opts.PlaceholderText          or ""
+			assert(type(opts) == "table", "CreateInput: opts must be a table")
+			local label = tostring(opts.Name                     or "Input")
+			local ph    = tostring(opts.PlaceholderText          or "")
 			local flag  = opts.Flag
-			local cb    = opts.Callback                 or function() end
-			local clear = opts.RemoveTextAfterFocusLost or false
+			local cb    = opts.Callback                          or function() end
+			local clear = opts.RemoveTextAfterFocusLost          or false
 
-			local el = El(C.ElH)
+			local el = El(K.ElH)
+			HoverEl(el)
+			MkLabel(el, {
+				Text           = label,
+				TextSize       = 13,
+				TextColor3     = Theme.TextPrimary,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Size           = UDim2.new(0.4, -K.Pad, 1, 0),
+				Position       = UDim2.new(0, K.Pad, 0, 0),
+			})
 
-			local nameL = Label(el, label, 13, Theme.TextPrimary, Enum.TextXAlignment.Left)
-			nameL.Size     = UDim2.new(0.4, -C.ElPad, 1, 0)
-			nameL.Position = UDim2.new(0, C.ElPad, 0, 0)
+			local iFrame = MkFrame(el, {
+				BackgroundColor3 = Theme.Background,
+				Size             = UDim2.new(0.55, -K.Pad, 0, 24),
+				Position         = UDim2.new(0.45, 0, 0.5, -12),
+			})
+			MkCorner(iFrame, 4)
+			local iStroke = MkStroke(iFrame, Theme.Border)
 
-			local iFrame = Frame(el, Theme.Background,
-				UDim2.new(0.55, -C.ElPad, 0, 24),
-				UDim2.new(0.45, 0, 0.5, -12)
-			)
-			Corner(iFrame, 4)
-			local iStroke = Stroke(iFrame, Theme.Border)
-
-			local iBox = Instance.new("TextBox")
-			iBox.BackgroundTransparency = 1
-			iBox.PlaceholderText        = ph
-			iBox.PlaceholderColor3      = Theme.TextMuted
-			iBox.Text                   = ""
-			iBox.TextSize               = 12
-			iBox.Font                   = Enum.Font.Gotham
-			iBox.TextColor3             = Theme.TextPrimary
-			iBox.TextXAlignment         = Enum.TextXAlignment.Left
-			iBox.ClearTextOnFocus       = false
-			iBox.Size                   = UDim2.new(1, -10, 1, 0)
-			iBox.Position               = UDim2.new(0, 5, 0, 0)
-			iBox.Parent                 = iFrame
+			local iBox = New("TextBox", {
+				BackgroundTransparency = 1,
+				PlaceholderText        = ph,
+				PlaceholderColor3      = Theme.TextMuted,
+				Text                   = "",
+				TextSize               = 12,
+				Font                   = Enum.Font.Gotham,
+				TextColor3             = Theme.TextPrimary,
+				TextXAlignment         = Enum.TextXAlignment.Left,
+				TextYAlignment         = Enum.TextYAlignment.Center,
+				ClearTextOnFocus       = false,
+				Size                   = UDim2.new(1, -10, 1, 0),
+				Position               = UDim2.new(0, 5, 0, 0),
+				Parent                 = iFrame,
+			})
 
 			iBox.Focused:Connect(function()
-				Tw(iFrame, C.TF, {BackgroundColor3 = Theme.SurfaceHover})
+				Tw(iFrame, K.TF, {BackgroundColor3 = Theme.SurfaceHover})
 				iStroke.Color = Theme.Accent
 			end)
 			iBox.FocusLost:Connect(function()
-				Tw(iFrame, C.TF, {BackgroundColor3 = Theme.Background})
+				Tw(iFrame, K.TF, {BackgroundColor3 = Theme.Background})
 				iStroke.Color = Theme.Border
-				task.spawn(function()
-					local ok, err = pcall(cb, iBox.Text)
-					if not ok then Window:Notify({Title = "Error", Content = tostring(err), Duration = 4}) end
-				end)
+				task.spawn(FireCallback, cb, iBox.Text)
 				if clear then iBox.Text = "" end
 			end)
-
-			el.MouseEnter:Connect(function() Tw(el, C.TF, {BackgroundColor3 = Theme.SurfaceHover}) end)
-			el.MouseLeave:Connect(function() Tw(el, C.TF, {BackgroundColor3 = Theme.Surface}) end)
 
 			local O = {}
 			function O:Set(v) iBox.Text = tostring(v) end
@@ -997,38 +1116,51 @@ function Noctaer:CreateWindow(opts)
 		end
 
 		function Tab:CreateKeybind(opts)
-			local label   = opts.Name           or "Keybind"
-			local default = opts.CurrentKeybind or "F"
+			assert(type(opts) == "table", "CreateKeybind: opts must be a table")
+			local label   = tostring(opts.Name           or "Keybind")
 			local flag    = opts.Flag
-			local cb      = opts.Callback       or function() end
-
-			local el        = El(C.ElH)
-			local curKey    = default
+			local cb      = opts.Callback                or function() end
+			local curKey  = tostring(opts.CurrentKeybind or "F")
+			local iid     = NextInputId()
 			local listening = false
 
-			local nameL = Label(el, label, 13, Theme.TextPrimary, Enum.TextXAlignment.Left)
-			nameL.Size     = UDim2.new(0.6, -C.ElPad, 1, 0)
-			nameL.Position = UDim2.new(0, C.ElPad, 0, 0)
+			local el = El(K.ElH)
+			HoverEl(el)
+			MkLabel(el, {
+				Text           = label,
+				TextSize       = 13,
+				TextColor3     = Theme.TextPrimary,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Size           = UDim2.new(0.6, -K.Pad, 1, 0),
+				Position       = UDim2.new(0, K.Pad, 0, 0),
+			})
 
-			local kFrame = Frame(el, Theme.Background,
-				UDim2.new(0, 58, 0, 24),
-				UDim2.new(1, -(58 + C.ElPad), 0.5, -12)
-			)
-			Corner(kFrame, 4)
-			local kStroke = Stroke(kFrame, Theme.Border)
+			local kFrame = MkFrame(el, {
+				BackgroundColor3 = Theme.Background,
+				Size             = UDim2.new(0, 58, 0, 24),
+				Position         = UDim2.new(1, -(58 + K.Pad), 0.5, -12),
+			})
+			MkCorner(kFrame, 4)
+			local kStroke = MkStroke(kFrame, Theme.Border)
 
-			local kLbl = Label(kFrame, curKey, 11, Theme.Accent, Enum.TextXAlignment.Center, 4)
-			kLbl.Font = Enum.Font.GothamBold
+			local kLbl = MkLabel(kFrame, {
+				Text           = curKey,
+				TextSize       = 11,
+				Font           = Enum.Font.GothamBold,
+				TextColor3     = Theme.Accent,
+				TextXAlignment = Enum.TextXAlignment.Center,
+				ZIndex         = 4,
+			})
 
-			local kBtn = Btn(kFrame, UDim2.new(1, 0, 1, 0), nil, 5)
+			local kBtn = MkBtn(kFrame, {Size = UDim2.new(1, 0, 1, 0), ZIndex = 5})
 			kBtn.MouseButton1Click:Connect(function()
 				listening     = true
 				kLbl.Text     = "..."
 				kStroke.Color = Theme.Accent
-				Tw(kFrame, C.TF, {BackgroundColor3 = Theme.SurfaceHover})
+				Tw(kFrame, K.TF, {BackgroundColor3 = Theme.SurfaceHover})
 			end)
 
-			UserInputService.InputBegan:Connect(function(input, processed)
+			RegisterInputBegan(iid, function(input, processed)
 				if listening then
 					if input.KeyCode ~= Enum.KeyCode.Unknown then
 						local parts = string.split(tostring(input.KeyCode), ".")
@@ -1036,52 +1168,66 @@ function Noctaer:CreateWindow(opts)
 						kLbl.Text     = curKey
 						listening     = false
 						kStroke.Color = Theme.Border
-						Tw(kFrame, C.TF, {BackgroundColor3 = Theme.Background})
+						Tw(kFrame, K.TF, {BackgroundColor3 = Theme.Background})
 						if flag then Noctaer.Flags[flag] = {CurrentKeybind = curKey} end
 					end
 				elseif not processed then
 					local ok, kc = pcall(function() return Enum.KeyCode[curKey] end)
 					if ok and kc and input.KeyCode == kc then
-						task.spawn(pcall, cb)
+						task.spawn(FireCallback, cb)
 					end
 				end
 			end)
 
-			el.MouseEnter:Connect(function() Tw(el, C.TF, {BackgroundColor3 = Theme.SurfaceHover}) end)
-			el.MouseLeave:Connect(function() Tw(el, C.TF, {BackgroundColor3 = Theme.Surface}) end)
-
 			local O = {}
-			function O:Set(k) curKey = tostring(k) kLbl.Text = curKey end
+			function O:Set(k)
+				curKey    = tostring(k)
+				kLbl.Text = curKey
+			end
 			function O:Get() return curKey end
+			function O:Destroy() UnregisterInput(iid) end
 			if flag then Noctaer.Flags[flag] = O end
 			return O
 		end
 
 		function Tab:CreateLabel(text)
-			local el = Frame(sc, Theme.Surface, UDim2.new(1, 0, 0, 30))
-			Corner(el, C.Rs)
-			local lbl = Label(el, text, 12, Theme.TextSecondary, Enum.TextXAlignment.Left)
-			lbl.Size     = UDim2.new(1, -(C.ElPad * 2), 1, 0)
-			lbl.Position = UDim2.new(0, C.ElPad, 0, 0)
+			local el = MkFrame(sc, {
+				BackgroundColor3 = Theme.Surface,
+				Size             = UDim2.new(1, 0, 0, 30),
+			})
+			MkCorner(el, K.Rs)
+			local lbl = MkLabel(el, {
+				Text           = tostring(text or ""),
+				TextSize       = 12,
+				TextColor3     = Theme.TextSecondary,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				Size           = UDim2.new(1, -(K.Pad * 2), 1, 0),
+				Position       = UDim2.new(0, K.Pad, 0, 0),
+			})
 			local O = {}
-			function O:Set(s) lbl.Text = s end
+			function O:Set(s) lbl.Text = tostring(s) end
 			return O
 		end
 
 		return Tab
 	end
 
-	win.BackgroundTransparency = 1
-	Tw(win,    C.TM, {BackgroundTransparency = 0})
-	Tw(shadow, C.TM, {ImageTransparency = 0.55})
+	function Window:Destroy()
+		DisconnectAll()
+		if IsAlive(sg) then sg:Destroy() end
+	end
 
 	return Window
 end
 
 function Noctaer:Destroy()
-	for _, v in ipairs(CoreGui:GetChildren()) do
-		if v.Name == "Noctaer" then v:Destroy() end
+	local function sweep(parent)
+		for _, v in parent:GetChildren() do
+			if v.Name == "Noctaer" then v:Destroy() end
+		end
 	end
+	sweep(Svc.CoreGui)
+	if gethui then pcall(sweep, gethui()) end
 end
 
 return Noctaer
