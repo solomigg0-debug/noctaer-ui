@@ -7,7 +7,7 @@ Noctaer.Flags = {}
 local TweenService     = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService       = game:GetService("RunService")
-local HttpService      = game:GetService("HttpService")
+local CoreGui          = game:GetService("CoreGui")
 
 local Theme = {
 	Background    = Color3.fromRGB(12, 12, 14),
@@ -28,17 +28,17 @@ local Theme = {
 }
 
 local C = {
-	WindowW   = 520,
-	WindowH   = 440,
-	TopbarH   = 42,
-	TabListW  = 128,
-	ElH       = 38,
-	ElPad     = 12,
-	Gap       = 4,
-	R         = 8,
-	Rs        = 5,
-	TF        = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-	TM        = TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+	WindowW  = 520,
+	WindowH  = 440,
+	TopbarH  = 42,
+	TabListW = 128,
+	ElH      = 38,
+	ElPad    = 12,
+	Gap      = 4,
+	R        = 8,
+	Rs       = 5,
+	TF       = TweenInfo.new(0.18, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+	TM       = TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 }
 
 local function Tw(o, ti, p) TweenService:Create(o, ti, p):Play() end
@@ -103,11 +103,11 @@ end
 local function Label(p, txt, tsz, col, xa, zi)
 	local l = Instance.new("TextLabel")
 	l.BackgroundTransparency = 1
-	l.Text           = txt  or ""
-	l.TextSize       = tsz  or 13
-	l.TextColor3     = col  or Theme.TextPrimary
+	l.Text           = txt or ""
+	l.TextSize       = tsz or 13
+	l.TextColor3     = col or Theme.TextPrimary
 	l.Font           = Enum.Font.Gotham
-	l.TextXAlignment = xa   or Enum.TextXAlignment.Left
+	l.TextXAlignment = xa  or Enum.TextXAlignment.Left
 	l.TextYAlignment = Enum.TextYAlignment.Center
 	l.Size           = UDim2.new(1, 0, 1, 0)
 	if zi then l.ZIndex = zi end
@@ -115,110 +115,44 @@ local function Label(p, txt, tsz, col, xa, zi)
 	return l
 end
 
-local function GetRoot()
-	if gethui then return gethui() end
+local function GetGuiParent()
+	if gethui then
+		return gethui()
+	end
 	local sg = Instance.new("ScreenGui")
 	sg.ResetOnSpawn = false
-	if syn and syn.protect_gui then syn.protect_gui(sg) end
-	sg.Parent = game:GetService("CoreGui")
+	if syn and syn.protect_gui then
+		pcall(syn.protect_gui, sg)
+	end
+	sg.Parent = CoreGui
 	return sg
 end
 
 local function SetupDrag(handle, target)
-	local active, origin, base = false, nil, nil
+	local active = false
+	local origin = Vector3.new()
+	local base   = UDim2.new()
+
 	handle.InputBegan:Connect(function(i)
 		if i.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
 		active = true
 		origin = i.Position
 		base   = target.Position
 		i.Changed:Connect(function()
-			if i.UserInputState == Enum.UserInputState.End then active = false end
+			if i.UserInputState == Enum.UserInputState.End then
+				active = false
+			end
 		end)
 	end)
+
 	UserInputService.InputChanged:Connect(function(i)
-		if not active or i.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+		if not active then return end
+		if i.UserInputType ~= Enum.UserInputType.MouseMovement then return end
 		local d = i.Position - origin
-		target.Position = UDim2.new(base.X.Scale, base.X.Offset + d.X, base.Y.Scale, base.Y.Offset + d.Y)
-	end)
-end
-
-local NotifContainer
-local notifIdx = 0
-
-local function InitNotifs(sg)
-	NotifContainer = Instance.new("Frame")
-	NotifContainer.Name                 = "Notifs"
-	NotifContainer.BackgroundTransparency = 1
-	NotifContainer.Size                 = UDim2.new(0, 296, 1, -20)
-	NotifContainer.Position             = UDim2.new(1, -304, 0, 10)
-	NotifContainer.ZIndex               = 200
-	NotifContainer.Parent               = sg
-
-	local ll = ListLayout(NotifContainer, 6)
-	ll.VerticalAlignment = Enum.VerticalAlignment.Bottom
-end
-
-function Noctaer:Notify(opts)
-	if not NotifContainer then return end
-	local title    = opts.Title    or "Notification"
-	local content  = opts.Content  or ""
-	local duration = opts.Duration or 5
-
-	notifIdx += 1
-
-	local card = Frame(NotifContainer, Theme.NotifBg, UDim2.new(1, 0, 0, 62))
-	card.ClipsDescendants = true
-	card.LayoutOrder      = notifIdx
-	card.ZIndex           = 200
-	card.BackgroundTransparency = 1
-	Corner(card, C.Rs)
-	Stroke(card, Theme.Border)
-
-	local bar = Frame(card, Theme.Accent, UDim2.new(0, 3, 1, -8), UDim2.new(0, 0, 0, 4))
-	bar.ZIndex = 201
-	Corner(bar, 2)
-
-	local tl = Instance.new("TextLabel")
-	tl.BackgroundTransparency = 1
-	tl.Text           = title
-	tl.TextSize       = 13
-	tl.Font           = Enum.Font.GothamBold
-	tl.TextColor3     = Theme.TextPrimary
-	tl.TextXAlignment = Enum.TextXAlignment.Left
-	tl.TextYAlignment = Enum.TextYAlignment.Center
-	tl.Size           = UDim2.new(1, -20, 0, 18)
-	tl.Position       = UDim2.new(0, 14, 0, 9)
-	tl.TextTransparency = 1
-	tl.ZIndex         = 201
-	tl.Parent         = card
-
-	local cl = Instance.new("TextLabel")
-	cl.BackgroundTransparency = 1
-	cl.Text           = content
-	cl.TextSize       = 11
-	cl.Font           = Enum.Font.Gotham
-	cl.TextColor3     = Theme.TextSecondary
-	cl.TextXAlignment = Enum.TextXAlignment.Left
-	cl.TextYAlignment = Enum.TextYAlignment.Top
-	cl.TextWrapped    = true
-	cl.Size           = UDim2.new(1, -20, 0, 26)
-	cl.Position       = UDim2.new(0, 14, 0, 30)
-	cl.TextTransparency = 1
-	cl.ZIndex         = 201
-	cl.Parent         = card
-
-	Tw(card, C.TM, {BackgroundTransparency = 0})
-	Tw(tl,   C.TM, {TextTransparency = 0})
-	Tw(cl,   C.TM, {TextTransparency = 0.15})
-
-	task.delay(duration, function()
-		Tw(card, C.TM, {BackgroundTransparency = 1})
-		Tw(tl,   C.TM, {TextTransparency = 1})
-		Tw(cl,   C.TM, {TextTransparency = 1})
-		task.delay(0.35, function()
-			Tw(card, C.TF, {Size = UDim2.new(1, 0, 0, 0)})
-			task.delay(0.2, function() card:Destroy() end)
-		end)
+		target.Position = UDim2.new(
+			base.X.Scale, base.X.Offset + d.X,
+			base.Y.Scale, base.Y.Offset + d.Y
+		)
 	end)
 end
 
@@ -233,31 +167,112 @@ function Noctaer:CreateWindow(opts)
 	sg.ZIndexBehavior = Enum.ZIndexBehavior.Global
 	sg.DisplayOrder   = 999
 
-	local root = GetRoot()
-	local dest = root:IsA("ScreenGui") and root.Parent or root
+	local guiParent = GetGuiParent()
+	local dest      = guiParent:IsA("ScreenGui") and guiParent.Parent or guiParent
+
 	for _, v in ipairs(dest:GetChildren()) do
-		if v.Name == "Noctaer" then v:Destroy() end
+		if v ~= sg and v.Name == "Noctaer" then v:Destroy() end
 	end
 	sg.Parent = dest
 
-	InitNotifs(sg)
+	-- notification state scoped to this window
+	local notifIdx       = 0
+	local notifContainer = Instance.new("Frame")
+	notifContainer.Name                 = "Notifs"
+	notifContainer.BackgroundTransparency = 1
+	notifContainer.Size                 = UDim2.new(0, 296, 1, -20)
+	notifContainer.Position             = UDim2.new(1, -304, 0, 10)
+	notifContainer.ZIndex               = 200
+	notifContainer.Parent               = sg
+	local notifLayout = ListLayout(notifContainer, 6)
+	notifLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+
+	local Window = {}
+
+	function Window:Notify(o)
+		local title    = o.Title    or "Notification"
+		local content  = o.Content  or ""
+		local duration = o.Duration or 5
+
+		notifIdx += 1
+
+		local card = Frame(notifContainer, Theme.NotifBg, UDim2.new(1, 0, 0, 62))
+		card.ClipsDescendants   = true
+		card.LayoutOrder        = notifIdx
+		card.ZIndex             = 200
+		card.BackgroundTransparency = 1
+		Corner(card, C.Rs)
+		Stroke(card, Theme.Border)
+
+		local bar = Frame(card, Theme.Accent, UDim2.new(0, 3, 1, -8), UDim2.new(0, 0, 0, 4))
+		bar.ZIndex = 201
+		Corner(bar, 2)
+
+		local tl = Instance.new("TextLabel")
+		tl.BackgroundTransparency = 1
+		tl.Text             = title
+		tl.TextSize         = 13
+		tl.Font             = Enum.Font.GothamBold
+		tl.TextColor3       = Theme.TextPrimary
+		tl.TextXAlignment   = Enum.TextXAlignment.Left
+		tl.TextYAlignment   = Enum.TextYAlignment.Center
+		tl.TextTransparency = 1
+		tl.Size             = UDim2.new(1, -20, 0, 18)
+		tl.Position         = UDim2.new(0, 14, 0, 9)
+		tl.ZIndex           = 201
+		tl.Parent           = card
+
+		local cl = Instance.new("TextLabel")
+		cl.BackgroundTransparency = 1
+		cl.Text             = content
+		cl.TextSize         = 11
+		cl.Font             = Enum.Font.Gotham
+		cl.TextColor3       = Theme.TextSecondary
+		cl.TextXAlignment   = Enum.TextXAlignment.Left
+		cl.TextYAlignment   = Enum.TextYAlignment.Top
+		cl.TextWrapped      = true
+		cl.TextTransparency = 1
+		cl.Size             = UDim2.new(1, -20, 0, 26)
+		cl.Position         = UDim2.new(0, 14, 0, 30)
+		cl.ZIndex           = 201
+		cl.Parent           = card
+
+		Tw(card, C.TM, {BackgroundTransparency = 0})
+		Tw(tl,   C.TM, {TextTransparency = 0})
+		Tw(cl,   C.TM, {TextTransparency = 0.15})
+
+		task.delay(duration, function()
+			if not card or not card.Parent then return end
+			Tw(card, C.TM, {BackgroundTransparency = 1})
+			Tw(tl,   C.TM, {TextTransparency = 1})
+			Tw(cl,   C.TM, {TextTransparency = 1})
+			task.delay(0.35, function()
+				if not card or not card.Parent then return end
+				Tw(card, C.TF, {Size = UDim2.new(1, 0, 0, 0)})
+				task.delay(0.2, function()
+					if card and card.Parent then card:Destroy() end
+				end)
+			end)
+		end)
+	end
+
+	-- keep Noctaer:Notify working by forwarding to Window:Notify
+	Noctaer.Notify = function(_, o) Window:Notify(o) end
 
 	-- drop shadow
 	local shadow = Instance.new("ImageLabel")
-	shadow.Name               = "Shadow"
 	shadow.BackgroundTransparency = 1
-	shadow.Image              = "rbxassetid://6014261993"
-	shadow.ImageColor3        = Color3.new(0, 0, 0)
-	shadow.ImageTransparency  = 1
-	shadow.ScaleType          = Enum.ScaleType.Slice
-	shadow.SliceCenter        = Rect.new(49, 49, 450, 450)
-	shadow.AnchorPoint        = Vector2.new(0.5, 0.5)
-	shadow.Size               = UDim2.new(0, C.WindowW + 48, 0, C.WindowH + 48)
-	shadow.Position           = UDim2.new(0.5, 0, 0.5, 0)
-	shadow.ZIndex             = 1
-	shadow.Parent             = sg
+	shadow.Image             = "rbxassetid://6014261993"
+	shadow.ImageColor3       = Color3.new(0, 0, 0)
+	shadow.ImageTransparency = 1
+	shadow.ScaleType         = Enum.ScaleType.Slice
+	shadow.SliceCenter       = Rect.new(49, 49, 450, 450)
+	shadow.AnchorPoint       = Vector2.new(0.5, 0.5)
+	shadow.Size              = UDim2.new(0, C.WindowW + 48, 0, C.WindowH + 48)
+	shadow.Position          = UDim2.new(0.5, 0, 0.5, 0)
+	shadow.ZIndex            = 1
+	shadow.Parent            = sg
 
-	-- root window frame
 	local win = Frame(sg, Theme.Background,
 		UDim2.new(0, C.WindowW, 0, C.WindowH),
 		UDim2.new(0.5, -C.WindowW / 2, 0.5, -C.WindowH / 2),
@@ -267,27 +282,15 @@ function Noctaer:CreateWindow(opts)
 	Corner(win, C.R)
 	Stroke(win, Theme.Border)
 
-	-- topbar
 	local topbar = Frame(win, Theme.Surface,
 		UDim2.new(1, 0, 0, C.TopbarH),
 		UDim2.new(0, 0, 0, 0),
 		3
 	)
 	Corner(topbar, C.R)
-	-- fill lower rounded corners
-	Frame(topbar, Theme.Surface,
-		UDim2.new(1, 0, 0, C.R),
-		UDim2.new(0, 0, 1, -C.R),
-		3
-	)
-	-- accent line under topbar
-	Frame(win, Theme.Accent,
-		UDim2.new(1, 0, 0, 1),
-		UDim2.new(0, 0, 0, C.TopbarH),
-		3
-	)
+	Frame(topbar, Theme.Surface, UDim2.new(1, 0, 0, C.R), UDim2.new(0, 0, 1, -C.R), 3)
+	Frame(win, Theme.Accent, UDim2.new(1, 0, 0, 1), UDim2.new(0, 0, 0, C.TopbarH), 3)
 
-	-- title / subtitle
 	if wSub ~= "" then
 		local tl = Instance.new("TextLabel")
 		tl.BackgroundTransparency = 1
@@ -316,12 +319,11 @@ function Noctaer:CreateWindow(opts)
 		sl.Parent         = topbar
 	else
 		local tl = Label(topbar, wTitle, 13, Theme.TextPrimary, Enum.TextXAlignment.Left, 4)
+		tl.Font     = Enum.Font.GothamBold
 		tl.Size     = UDim2.new(0, 240, 1, 0)
 		tl.Position = UDim2.new(0, C.ElPad, 0, 0)
-		tl.Font     = Enum.Font.GothamBold
 	end
 
-	-- topbar icon buttons (close / minimize)
 	local function MakeTopBtn(offsetR, glyph)
 		local b = Btn(topbar,
 			UDim2.new(0, 28, 0, 28),
@@ -346,7 +348,6 @@ function Noctaer:CreateWindow(opts)
 	local minBtn   = MakeTopBtn(42, "─")
 	closeBtn.MouseButton1Click:Connect(function() sg:Destroy() end)
 
-	-- body container (clipped, below topbar)
 	local body = Frame(win, Theme.Background,
 		UDim2.new(1, 0, 1, -C.TopbarH),
 		UDim2.new(0, 0, 0, C.TopbarH),
@@ -354,7 +355,6 @@ function Noctaer:CreateWindow(opts)
 	)
 	body.ClipsDescendants = true
 
-	-- sidebar
 	local sidebar = Frame(body, Theme.Surface,
 		UDim2.new(0, C.TabListW, 1, 0),
 		UDim2.new(0, 0, 0, 0),
@@ -362,16 +362,10 @@ function Noctaer:CreateWindow(opts)
 	)
 	Corner(sidebar, C.Rs)
 	Stroke(sidebar, Theme.Border)
-	-- hide right rounded corners
-	Frame(sidebar, Theme.Surface,
-		UDim2.new(0, C.Rs, 1, 0),
-		UDim2.new(1, -C.Rs, 0, 0),
-		3
-	)
+	Frame(sidebar, Theme.Surface, UDim2.new(0, C.Rs, 1, 0), UDim2.new(1, -C.Rs, 0, 0), 3)
 	ListLayout(sidebar, C.Gap)
 	Pad(sidebar, 8, 8, 6, 6)
 
-	-- content panel
 	local content = Frame(body, Theme.Background,
 		UDim2.new(1, -C.TabListW, 1, 0),
 		UDim2.new(0, C.TabListW, 0, 0),
@@ -381,7 +375,6 @@ function Noctaer:CreateWindow(opts)
 
 	SetupDrag(topbar, win)
 
-	-- minimize
 	local minimized = false
 	minBtn.MouseButton1Click:Connect(function()
 		if minimized then
@@ -393,11 +386,12 @@ function Noctaer:CreateWindow(opts)
 			minimized = true
 			Tw(win,    C.TM, {Size = UDim2.new(0, C.WindowW, 0, C.TopbarH)})
 			Tw(shadow, C.TM, {Size = UDim2.new(0, C.WindowW + 48, 0, C.TopbarH + 48)})
-			task.delay(0.3, function() if minimized then body.Visible = false end end)
+			task.delay(0.3, function()
+				if minimized then body.Visible = false end
+			end)
 		end
 	end)
 
-	-- hide toggle
 	local hidden = false
 	UserInputService.InputBegan:Connect(function(input, processed)
 		if processed then return end
@@ -412,15 +406,8 @@ function Noctaer:CreateWindow(opts)
 	local tabBtns   = {}
 	local tabPages  = {}
 
-	local Window = {}
-
 	function Window:CreateTab(name)
-		-- sidebar button
-		local btn = Btn(sidebar,
-			UDim2.new(1, 0, 0, 30),
-			UDim2.new(0, 0, 0, 0),
-			4
-		)
+		local btn = Btn(sidebar, UDim2.new(1, 0, 0, 30), UDim2.new(0, 0, 0, 0), 4)
 		btn.BackgroundTransparency = 1
 		Corner(btn, C.Rs)
 
@@ -436,7 +423,6 @@ function Noctaer:CreateWindow(opts)
 		btnLbl.Size     = UDim2.new(1, -14, 1, 0)
 		btnLbl.Position = UDim2.new(0, 10, 0, 0)
 
-		-- page + scroll
 		local page = Frame(content, Theme.Background,
 			UDim2.new(1, 0, 1, 0),
 			UDim2.new(0, 0, 0, 0),
@@ -521,10 +507,7 @@ function Noctaer:CreateWindow(opts)
 			lbl.Position       = UDim2.new(0, 2, 0, 0)
 			lbl.Parent         = sec
 
-			Frame(sec, Theme.Border,
-				UDim2.new(1, -88, 0, 1),
-				UDim2.new(0, 84, 0.5, 0)
-			)
+			Frame(sec, Theme.Border, UDim2.new(1, -88, 0, 1), UDim2.new(0, 84, 0.5, 0))
 		end
 
 		function Tab:CreateButton(opts)
@@ -543,8 +526,8 @@ function Noctaer:CreateWindow(opts)
 			nameL.TextColor3     = Theme.TextPrimary
 			nameL.TextXAlignment = Enum.TextXAlignment.Left
 			nameL.TextYAlignment = Enum.TextYAlignment.Center
-			nameL.Size           = UDim2.new(1, -(62 + C.ElPad * 2), 0, 18)
-			nameL.Position       = UDim2.new(0, C.ElPad, 0, desc ~= "" and 8 or math.floor(h / 2) - 9)
+			nameL.Size           = UDim2.new(1, -(52 + C.ElPad * 3), 0, 18)
+			nameL.Position       = UDim2.new(0, C.ElPad, 0, desc ~= "" and 8 or (math.floor(h / 2) - 9))
 			nameL.Parent         = el
 
 			if desc ~= "" then
@@ -556,7 +539,7 @@ function Noctaer:CreateWindow(opts)
 				dl.TextColor3     = Theme.TextSecondary
 				dl.TextXAlignment = Enum.TextXAlignment.Left
 				dl.TextYAlignment = Enum.TextYAlignment.Center
-				dl.Size           = UDim2.new(1, -(62 + C.ElPad * 2), 0, 14)
+				dl.Size           = UDim2.new(1, -(52 + C.ElPad * 3), 0, 14)
 				dl.Position       = UDim2.new(0, C.ElPad, 0, 28)
 				dl.Parent         = el
 			end
@@ -580,10 +563,12 @@ function Noctaer:CreateWindow(opts)
 			end)
 			hit.MouseButton1Click:Connect(function()
 				Tw(runF, C.TF, {BackgroundColor3 = Color3.fromRGB(70, 72, 180)})
-				task.delay(0.15, function() Tw(runF, C.TF, {BackgroundColor3 = Theme.Accent}) end)
+				task.delay(0.15, function()
+					if runF and runF.Parent then Tw(runF, C.TF, {BackgroundColor3 = Theme.Accent}) end
+				end)
 				task.spawn(function()
 					local ok, err = pcall(cb)
-					if not ok then Noctaer:Notify({Title = "Error", Content = tostring(err), Duration = 4}) end
+					if not ok then Window:Notify({Title = "Error", Content = tostring(err), Duration = 4}) end
 				end)
 			end)
 
@@ -593,11 +578,11 @@ function Noctaer:CreateWindow(opts)
 		end
 
 		function Tab:CreateToggle(opts)
-			local label   = opts.Name        or "Toggle"
-			local desc    = opts.Description or ""
+			local label   = opts.Name         or "Toggle"
+			local desc    = opts.Description  or ""
 			local default = opts.CurrentValue or false
 			local flag    = opts.Flag
-			local cb      = opts.Callback    or function() end
+			local cb      = opts.Callback     or function() end
 			local h       = desc ~= "" and 50 or C.ElH
 
 			local el  = El(h)
@@ -611,8 +596,8 @@ function Noctaer:CreateWindow(opts)
 			nameL.TextColor3     = Theme.TextPrimary
 			nameL.TextXAlignment = Enum.TextXAlignment.Left
 			nameL.TextYAlignment = Enum.TextYAlignment.Center
-			nameL.Size           = UDim2.new(1, -(46 + C.ElPad * 2), 0, 18)
-			nameL.Position       = UDim2.new(0, C.ElPad, 0, desc ~= "" and 8 or math.floor(h / 2) - 9)
+			nameL.Size           = UDim2.new(1, -(36 + C.ElPad * 3), 0, 18)
+			nameL.Position       = UDim2.new(0, C.ElPad, 0, desc ~= "" and 8 or (math.floor(h / 2) - 9))
 			nameL.Parent         = el
 
 			if desc ~= "" then
@@ -624,7 +609,7 @@ function Noctaer:CreateWindow(opts)
 				dl.TextColor3     = Theme.TextSecondary
 				dl.TextXAlignment = Enum.TextXAlignment.Left
 				dl.TextYAlignment = Enum.TextYAlignment.Center
-				dl.Size           = UDim2.new(1, -(46 + C.ElPad * 2), 0, 14)
+				dl.Size           = UDim2.new(1, -(36 + C.ElPad * 3), 0, 14)
 				dl.Position       = UDim2.new(0, C.ElPad, 0, 28)
 				dl.Parent         = el
 			end
@@ -646,7 +631,7 @@ function Noctaer:CreateWindow(opts)
 				val = v
 				if v then
 					Tw(track, C.TF, {BackgroundColor3 = Theme.ToggleOn})
-					Tw(knob,  C.TF, {Position = UDim2.new(0, 19, 0.5, -7), BackgroundColor3 = Color3.new(1,1,1)})
+					Tw(knob,  C.TF, {Position = UDim2.new(0, 19, 0.5, -7), BackgroundColor3 = Color3.new(1, 1, 1)})
 				else
 					Tw(track, C.TF, {BackgroundColor3 = Theme.ToggleOff})
 					Tw(knob,  C.TF, {Position = UDim2.new(0, 3, 0.5, -7), BackgroundColor3 = Theme.TextSecondary})
@@ -654,7 +639,7 @@ function Noctaer:CreateWindow(opts)
 				if fire then
 					task.spawn(function()
 						local ok, err = pcall(cb, val)
-						if not ok then Noctaer:Notify({Title="Error", Content=tostring(err), Duration=4}) end
+						if not ok then Window:Notify({Title = "Error", Content = tostring(err), Duration = 4}) end
 					end)
 				end
 			end
@@ -674,14 +659,14 @@ function Noctaer:CreateWindow(opts)
 		end
 
 		function Tab:CreateSlider(opts)
-			local label   = opts.Name        or "Slider"
+			local label   = opts.Name         or "Slider"
 			local min     = (opts.Range and opts.Range[1]) or 0
 			local max     = (opts.Range and opts.Range[2]) or 100
-			local inc     = opts.Increment   or 1
-			local suffix  = opts.Suffix      or ""
+			local inc     = opts.Increment    or 1
+			local suffix  = opts.Suffix       or ""
 			local default = opts.CurrentValue or min
 			local flag    = opts.Flag
-			local cb      = opts.Callback    or function() end
+			local cb      = opts.Callback     or function() end
 
 			local el  = El(54)
 			local val = default
@@ -709,7 +694,6 @@ function Noctaer:CreateWindow(opts)
 			valL.Position       = UDim2.new(0.55, 0, 0, 8)
 			valL.Parent         = el
 
-			-- track sits in lower half of element
 			local track = Frame(el, Theme.SliderTrack,
 				UDim2.new(1, -(C.ElPad * 2), 0, 4),
 				UDim2.new(0, C.ElPad, 0, 36)
@@ -736,18 +720,17 @@ function Noctaer:CreateWindow(opts)
 				local pct = (v - min) / (max - min)
 				Tw(fill,  C.TF, {Size     = UDim2.new(pct, 0, 1, 0)})
 				Tw(thumb, C.TF, {Position = UDim2.new(pct, -6, 0.5, -6)})
-				valL.Text = tostring(v) .. (suffix ~= "" and " " .. suffix or "")
+				valL.Text = tostring(v) .. (suffix ~= "" and (" " .. suffix) or "")
 				if fire then
 					task.spawn(function()
 						local ok, err = pcall(cb, val)
-						if not ok then Noctaer:Notify({Title="Error", Content=tostring(err), Duration=4}) end
+						if not ok then Window:Notify({Title = "Error", Content = tostring(err), Duration = 4}) end
 					end)
 				end
 			end
 
 			SetVal(default, false)
 
-			-- hit area extends 12px each side of track for easier grab
 			local hitArea = Btn(track,
 				UDim2.new(1, 24, 1, 24),
 				UDim2.new(0, -12, 0, -12),
@@ -760,7 +743,11 @@ function Noctaer:CreateWindow(opts)
 				dragging = true
 				if conn then conn:Disconnect() end
 				conn = RunService.Heartbeat:Connect(function()
-					if not dragging then conn:Disconnect() return end
+					if not dragging then
+						conn:Disconnect()
+						conn = nil
+						return
+					end
 					local mx  = UserInputService:GetMouseLocation().X
 					local tx  = track.AbsolutePosition.X
 					local tw  = track.AbsoluteSize.X
@@ -768,7 +755,9 @@ function Noctaer:CreateWindow(opts)
 				end)
 			end)
 			UserInputService.InputEnded:Connect(function(i)
-				if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+				if i.UserInputType == Enum.UserInputType.MouseButton1 then
+					dragging = false
+				end
 			end)
 
 			el.MouseEnter:Connect(function() Tw(el, C.TF, {BackgroundColor3 = Theme.SurfaceHover}) end)
@@ -796,11 +785,7 @@ function Noctaer:CreateWindow(opts)
 			local ROW_H     = 28
 			local optH      = math.min(#options, 5) * ROW_H + 8
 
-			-- wrapper: grows to accommodate the open list
-			-- ClipsDescendants = false so list overflows the scroll without clipping
-			local wrapper = Frame(sc, Color3.new(),
-				UDim2.new(1, 0, 0, C.ElH)
-			)
+			local wrapper = Frame(sc, Color3.new(), UDim2.new(1, 0, 0, C.ElH))
 			wrapper.BackgroundTransparency = 1
 			wrapper.ClipsDescendants       = false
 
@@ -834,7 +819,6 @@ function Noctaer:CreateWindow(opts)
 			arrow.ZIndex         = 4
 			arrow.Parent         = el
 
-			-- drop list: positioned directly below el inside wrapper
 			local dropList = Frame(wrapper, Theme.Surface,
 				UDim2.new(1, 0, 0, 0),
 				UDim2.new(0, 0, 0, C.ElH + 2),
@@ -874,16 +858,14 @@ function Noctaer:CreateWindow(opts)
 					local on = table.find(selected, e.name) ~= nil
 					Tw(e.frame, C.TF, {
 						BackgroundColor3       = on and Theme.AccentDim or Color3.new(),
-						BackgroundTransparency = on and 0 or 1
+						BackgroundTransparency = on and 0 or 1,
 					})
 					Tw(e.lbl, C.TF, {TextColor3 = on and Theme.TextPrimary or Theme.TextSecondary})
 				end
 			end
 
 			for _, opt in ipairs(options) do
-				local row = Frame(listScroll, Color3.new(),
-					UDim2.new(1, 0, 0, ROW_H)
-				)
+				local row = Frame(listScroll, Color3.new(), UDim2.new(1, 0, 0, ROW_H))
 				row.BackgroundTransparency = 1
 				row.ZIndex = 21
 				Corner(row, 4)
@@ -893,7 +875,6 @@ function Noctaer:CreateWindow(opts)
 				rl.Position = UDim2.new(0, 8, 0, 0)
 
 				local rb = Btn(row, UDim2.new(1, 0, 1, 0), nil, 22)
-
 				table.insert(optBtns, {name = opt, frame = row, lbl = rl})
 
 				rb.MouseEnter:Connect(function()
@@ -919,7 +900,7 @@ function Noctaer:CreateWindow(opts)
 					RefreshColors()
 					task.spawn(function()
 						local ok, err = pcall(cb, multi and selected or selected[1])
-						if not ok then Noctaer:Notify({Title="Error", Content=tostring(err), Duration=4}) end
+						if not ok then Window:Notify({Title = "Error", Content = tostring(err), Duration = 4}) end
 					end)
 					if flag then Noctaer.Flags[flag] = {CurrentOption = selected} end
 				end)
@@ -958,7 +939,7 @@ function Noctaer:CreateWindow(opts)
 		end
 
 		function Tab:CreateInput(opts)
-			local label = opts.Name                    or "Input"
+			local label = opts.Name                     or "Input"
 			local ph    = opts.PlaceholderText          or ""
 			local flag  = opts.Flag
 			local cb    = opts.Callback                 or function() end
@@ -1000,7 +981,7 @@ function Noctaer:CreateWindow(opts)
 				iStroke.Color = Theme.Border
 				task.spawn(function()
 					local ok, err = pcall(cb, iBox.Text)
-					if not ok then Noctaer:Notify({Title="Error", Content=tostring(err), Duration=4}) end
+					if not ok then Window:Notify({Title = "Error", Content = tostring(err), Duration = 4}) end
 				end)
 				if clear then iBox.Text = "" end
 			end)
@@ -1050,8 +1031,8 @@ function Noctaer:CreateWindow(opts)
 			UserInputService.InputBegan:Connect(function(input, processed)
 				if listening then
 					if input.KeyCode ~= Enum.KeyCode.Unknown then
-						local split = string.split(tostring(input.KeyCode), ".")
-						curKey        = split[3]
+						local parts = string.split(tostring(input.KeyCode), ".")
+						curKey        = parts[3]
 						kLbl.Text     = curKey
 						listening     = false
 						kStroke.Color = Theme.Border
@@ -1060,7 +1041,7 @@ function Noctaer:CreateWindow(opts)
 					end
 				elseif not processed then
 					local ok, kc = pcall(function() return Enum.KeyCode[curKey] end)
-					if ok and input.KeyCode == kc then
+					if ok and kc and input.KeyCode == kc then
 						task.spawn(pcall, cb)
 					end
 				end
@@ -1098,7 +1079,7 @@ function Noctaer:CreateWindow(opts)
 end
 
 function Noctaer:Destroy()
-	for _, v in ipairs(game:GetService("CoreGui"):GetChildren()) do
+	for _, v in ipairs(CoreGui:GetChildren()) do
 		if v.Name == "Noctaer" then v:Destroy() end
 	end
 end
