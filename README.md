@@ -12,4 +12,4 @@ Minimal, clean and modular UI library for Roblox.
 ## Installation
 
 ```lua
-local Noctaer = loadstring(game:HttpGet("https://raw.githubusercontent.com/SEUUSER/noctaer-ui/main/src/Noctaer.lua"))()
+local Noctaer = loadstring(game:HttpGet("https://raw.githubusercontent.com/solomigg0-debug/noctaer-ui/refs/heads/main/src/Noctaer.lua"))()
